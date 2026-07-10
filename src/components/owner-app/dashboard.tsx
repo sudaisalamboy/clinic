@@ -13,6 +13,7 @@ import {
   CalendarCheck,
   ReceiptText,
   Package,
+  FileText,
   Settings as SettingsIcon,
   Activity,
 } from 'lucide-react'
@@ -35,6 +36,7 @@ import { DoctorsPanel } from './clinic/panels/doctors-panel'
 import { AppointmentsPanel } from './clinic/panels/appointments/appointments-panel'
 import { BillsPanel } from './clinic/panels/bills/bills-panel'
 import { InventoryPanel } from './clinic/panels/inventory/inventory-panel'
+import { PrescriptionsPanel } from './clinic/panels/prescriptions/prescriptions-panel'
 import { ReminderBanner } from './clinic/reminder-banner'
 import { InventoryAlertBanner } from './clinic/inventory-alert-banner'
 
@@ -77,7 +79,7 @@ export function Dashboard({ owner, onLock }: Props) {
     }[]
   >([])
   const [medicinesForDialogs, setMedicinesForDialogs] = useState<
-    { id: string; name: string; price: number; quantity: number }[]
+    { id: string; name: string; genericName: string | null; price: number; quantity: number }[]
   >([])
   const [doctorsForDialogs, setDoctorsForDialogs] = useState<
     {
@@ -149,9 +151,16 @@ export function Dashboard({ owner, onLock }: Props) {
       if (mRes.ok) {
         const d = await mRes.json()
         setMedicinesForDialogs(
-          (d.medicines ?? []).slice(0, 100).map((m: { id: string; name: string; price: number; quantity: number }) => ({
+          (d.medicines ?? []).slice(0, 100).map((m: {
+            id: string
+            name: string
+            genericName: string | null
+            price: number
+            quantity: number
+          }) => ({
             id: m.id,
             name: m.name,
+            genericName: m.genericName ?? null,
             price: m.price,
             quantity: m.quantity,
           })),
@@ -250,7 +259,7 @@ export function Dashboard({ owner, onLock }: Props) {
           <ReminderBanner refreshKey={refreshKey} onOpenAppointment={() => setTab('appointments')} />
           <InventoryAlertBanner refreshKey={refreshKey} onOpenInventory={() => setTab('inventory')} />
           <Tabs value={tab} onValueChange={setTab}>
-            <TabsList className="grid w-full grid-cols-3 sm:grid-cols-10 mb-6 h-auto">
+            <TabsList className="grid w-full grid-cols-3 sm:grid-cols-11 mb-6 h-auto">
               <TabsTrigger value="clinic" className="gap-1.5 py-2">
                 <LayoutGrid className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Dashboard</span>
@@ -277,6 +286,11 @@ export function Dashboard({ owner, onLock }: Props) {
                 <Package className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Inventory</span>
                 <span className="sm:hidden">Stock</span>
+              </TabsTrigger>
+              <TabsTrigger value="prescriptions" className="gap-1.5 py-2">
+                <FileText className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Rx</span>
+                <span className="sm:hidden">Rx</span>
               </TabsTrigger>
               <TabsTrigger value="notes" className="gap-1.5 py-2">
                 <span className="hidden sm:inline">Notes</span>
@@ -329,6 +343,13 @@ export function Dashboard({ owner, onLock }: Props) {
               </TabsContent>
               <TabsContent value="inventory" className="mt-0">
                 <InventoryPanel />
+              </TabsContent>
+              <TabsContent value="prescriptions" className="mt-0">
+                <PrescriptionsPanel
+                  patients={patientsForDialogs}
+                  doctors={doctorsForDialogs}
+                  medicines={medicinesForDialogs}
+                />
               </TabsContent>
               <TabsContent value="notes" className="mt-0">
                 <NotesPanel />

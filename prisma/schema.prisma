@@ -91,6 +91,8 @@ model Patient {
 
   appointments Appointment[]
   bills        Bill[]
+  medicalRecords MedicalRecord[]
+  prescriptions Prescription[]
 
   @@index([status])
   @@index([name])
@@ -222,6 +224,63 @@ model Medicine {
   @@index([quantity])
 }
 
+// ---------- Prescription & Medical Record ----------
+
+/// A medical record captures the clinical encounter: vitals, diagnosis, symptoms,
+/// examination notes. A prescription is generated from a medical record.
+model MedicalRecord {
+  id           String   @id @default(cuid())
+  patientId    String
+  patient      Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId     String?
+  doctor       Doctor?  @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+  appointmentId String?
+  /// Visit date / encounter date
+  visitDate    DateTime @default(now())
+  /// Chief complaint, e.g. "Fever for 3 days"
+  symptoms     String?
+  /// Vitals
+  temperature  String?
+  bloodPressure String?
+  pulse        String?
+  weight       String?
+  height       String?
+  /// Diagnosis
+  diagnosis    String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  prescription Prescription?
+
+  @@index([patientId])
+  @@index([doctorId])
+}
+
+model Prescription {
+  id              String   @id @default(cuid())
+  /// Auto-generated like RX-2026-0001
+  prescriptionNumber String @unique
+  medicalRecordId String   @unique
+  medicalRecord   MedicalRecord @relation(fields: [medicalRecordId], references: [id], onDelete: Cascade)
+  patientId       String
+  patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId        String?
+  doctor          Doctor?  @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+  /// JSON array of prescribed medicines: [{medicineId, name, dosage, frequency, duration, instructions}]
+  medicines       String   @default("[]")
+  /// General advice / special instructions
+  advice          String?
+  /// Optional follow-up / next visit date
+  nextVisitDate   DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([createdAt])
+}
+
 // ---------- Doctor & Department ----------
 
 model Department {
@@ -254,6 +313,8 @@ model Doctor {
   schedule     DoctorSchedule[]
   appointments Appointment[]
   bills        Bill[]
+  medicalRecords MedicalRecord[]
+  prescriptions Prescription[]
 
   @@index([status])
   @@index([departmentId])
