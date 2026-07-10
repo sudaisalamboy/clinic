@@ -105,8 +105,13 @@ model Appointment {
   doctor      Doctor?  @relation(fields: [doctorId], references: [id], onDelete: SetNull)
   scheduledAt DateTime
   reason      String?
-  status      String   @default("pending") // pending | completed | cancelled
+  /// Scheduled | Confirmed | Checked-In | Completed | Cancelled | No Show
+  status      String   @default("Scheduled")
   fee         Float    @default(0)
+  /// Daily token number, e.g. A-001, A-002... resets each day per doctor.
+  tokenNumber String?
+  /// Whether a reminder has been shown to the owner.
+  reminderSent Boolean @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -115,6 +120,8 @@ model Appointment {
   @@index([patientId])
   @@index([doctorId])
   @@index([scheduledAt])
+  @@index([status])
+  @@index([tokenNumber])
 }
 
 model Bill {

@@ -8,7 +8,9 @@ import { GenerateBillDialog } from './generate-bill-dialog'
 interface PatientOption {
   id: string
   name: string
-  phone?: string | null
+  phone: string | null
+  patientCode: string
+  dateOfBirth: string | null
 }
 interface MedicineOption {
   id: string
@@ -54,7 +56,13 @@ export function QuickActionsHost({ patients, medicines, doctors, onAnyChange }: 
     <>
       <AddPatientDialog
         onCreated={(id, name) => {
-          setExtraPatients((prev) => [{ id, name }, ...prev])
+          setExtraPatients((prev) => [{
+            id,
+            name,
+            phone: null,
+            patientCode: '',
+            dateOfBirth: null,
+          }, ...prev])
           onAnyChange()
         }}
       />

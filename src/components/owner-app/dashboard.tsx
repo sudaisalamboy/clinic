@@ -32,9 +32,10 @@ import { QuickActionsHost } from './clinic/quick-actions-host'
 import { ClinicDashboardPanel } from './clinic/panels/clinic-dashboard'
 import { PatientsPanel } from './clinic/panels/patients-panel'
 import { DoctorsPanel } from './clinic/panels/doctors-panel'
-import { AppointmentsPanel } from './clinic/panels/appointments'
+import { AppointmentsPanel } from './clinic/panels/appointments/appointments-panel'
 import { BillsPanel } from './clinic/panels/bills'
 import { InventoryPanel } from './clinic/panels/inventory'
+import { ReminderBanner } from './clinic/reminder-banner'
 
 interface OwnerInfo {
   id: string
@@ -66,7 +67,13 @@ export function Dashboard({ owner, onLock }: Props) {
   const [refreshKey, setRefreshKey] = useState(0)
   // Lightweight lists of patients + medicines for the quick action dialogs.
   const [patientsForDialogs, setPatientsForDialogs] = useState<
-    { id: string; name: string; phone?: string | null }[]
+    {
+      id: string
+      name: string
+      phone: string | null
+      patientCode: string
+      dateOfBirth: string | null
+    }[]
   >([])
   const [medicinesForDialogs, setMedicinesForDialogs] = useState<
     { id: string; name: string; price: number; quantity: number }[]
@@ -123,10 +130,18 @@ export function Dashboard({ owner, onLock }: Props) {
       if (pRes.ok) {
         const d = await pRes.json()
         setPatientsForDialogs(
-          (d.patients ?? []).slice(0, 50).map((p: { id: string; name: string; phone?: string | null }) => ({
+          (d.patients ?? []).slice(0, 100).map((p: {
+            id: string
+            name: string
+            phone: string | null
+            patientCode: string
+            dateOfBirth: string | null
+          }) => ({
             id: p.id,
             name: p.name,
             phone: p.phone ?? null,
+            patientCode: p.patientCode,
+            dateOfBirth: p.dateOfBirth ?? null,
           })),
         )
       }
@@ -231,6 +246,7 @@ export function Dashboard({ owner, onLock }: Props) {
 
         {/* Main */}
         <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-6">
+          <ReminderBanner refreshKey={refreshKey} onOpenAppointment={() => setTab('appointments')} />
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList className="grid w-full grid-cols-3 sm:grid-cols-10 mb-6 h-auto">
               <TabsTrigger value="clinic" className="gap-1.5 py-2">
@@ -295,7 +311,12 @@ export function Dashboard({ owner, onLock }: Props) {
                 <DoctorsPanel />
               </TabsContent>
               <TabsContent value="appointments" className="mt-0">
-                <AppointmentsPanel />
+                <AppointmentsPanel
+                  patients={patientsForDialogs}
+                  doctors={doctorsForDialogs}
+                  refreshKey={refreshKey}
+                  onChanged={() => setRefreshKey((k) => k + 1)}
+                />
               </TabsContent>
               <TabsContent value="bills" className="mt-0">
                 <BillsPanel />
