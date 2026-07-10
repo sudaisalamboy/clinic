@@ -29,7 +29,7 @@ import {
 } from './clinic/quick-actions-context'
 import { QuickActionsHost } from './clinic/quick-actions-host'
 import { ClinicDashboardPanel } from './clinic/panels/clinic-dashboard'
-import { PatientsPanel } from './clinic/panels/patients'
+import { PatientsPanel } from './clinic/panels/patients-panel'
 import { AppointmentsPanel } from './clinic/panels/appointments'
 import { BillsPanel } from './clinic/panels/bills'
 import { InventoryPanel } from './clinic/panels/inventory'

@@ -30,7 +30,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useQuickActions } from '../quick-actions-context'
-import { formatCurrency, formatRelative } from '../format'
+import { formatCurrency, formatRelative, calculateAge } from '../format'
 
 interface DashboardData {
   stats: {
@@ -42,8 +42,9 @@ interface DashboardData {
   chart: { label: string; count: number }[]
   recentPatients: {
     id: string
+    patientCode: string
     name: string
-    age: number | null
+    dateOfBirth: string | null
     gender: string | null
     phone: string | null
     createdAt: string
@@ -328,8 +329,13 @@ export function ClinicDashboardPanel({ onGoTo, refreshKey }: Props) {
                       transition={{ delay: i * 0.04 }}
                       className="border-b last:border-0 hover:bg-accent/30 transition"
                     >
-                      <td className="px-2 py-2 font-medium">{p.name}</td>
-                      <td className="px-2 py-2 text-muted-foreground">{p.age ?? '—'}</td>
+                      <td className="px-2 py-2 font-medium">
+                        <div>{p.name}</div>
+                        <div className="text-xs text-muted-foreground/70 font-mono">{p.patientCode}</div>
+                      </td>
+                      <td className="px-2 py-2 text-muted-foreground">
+                        {calculateAge(p.dateOfBirth) != null ? `${calculateAge(p.dateOfBirth)}y` : '—'}
+                      </td>
                       <td className="px-2 py-2 text-muted-foreground capitalize">{p.gender ?? '—'}</td>
                       <td className="px-2 py-2 text-muted-foreground hidden sm:table-cell">{p.phone ?? '—'}</td>
                       <td className="px-2 py-2 text-right text-muted-foreground">{formatRelative(p.createdAt)}</td>

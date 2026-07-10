@@ -55,3 +55,33 @@ export function defaultAppointmentTime(addHours = 1): string {
   d.setMinutes(0, 0, 0)
   return toLocalDatetimeInputValue(d)
 }
+
+/** Calculate age in years from a date of birth. Returns null if invalid/future. */
+export function calculateAge(dob: string | Date | null | undefined): number | null {
+  if (!dob) return null
+  const d = typeof dob === 'string' ? new Date(dob) : dob
+  if (isNaN(d.getTime())) return null
+  const now = new Date()
+  if (d.getTime() > now.getTime()) return null
+  let age = now.getFullYear() - d.getFullYear()
+  const m = now.getMonth() - d.getMonth()
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--
+  return age >= 0 && age < 150 ? age : null
+}
+
+/** Format a date of birth for display: "Jan 15, 1990 (35y)". */
+export function formatDobWithAge(dob: string | Date | null | undefined): string {
+  if (!dob) return '—'
+  const d = typeof dob === 'string' ? new Date(dob) : dob
+  const age = calculateAge(d)
+  return `${formatDate(d)}${age != null ? ` (${age}y)` : ''}`
+}
+
+/** Convert a Date or ISO string to a value suitable for <input type="date">. */
+export function toDateInputValue(dob: string | Date | null | undefined): string {
+  if (!dob) return ''
+  const d = typeof dob === 'string' ? new Date(dob) : dob
+  if (isNaN(d.getTime())) return ''
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}

@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { useQuickActions } from './quick-actions-context'
+import { calculateAge } from './format'
 
 interface Props {
   onCreated?: (id: string, name: string) => void
@@ -36,8 +37,9 @@ export function AddPatientDialog({ onCreated, keepOpen }: Props) {
   const { toast } = useToast()
 
   const [name, setName] = useState('')
-  const [age, setAge] = useState('')
+  const [dateOfBirth, setDateOfBirth] = useState('')
   const [gender, setGender] = useState<'male' | 'female' | 'other' | ''>('')
+  const [bloodGroup, setBloodGroup] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [address, setAddress] = useState('')
@@ -47,7 +49,7 @@ export function AddPatientDialog({ onCreated, keepOpen }: Props) {
 
   useEffect(() => {
     if (isOpen) {
-      setName(''); setAge(''); setGender(''); setPhone('')
+      setName(''); setDateOfBirth(''); setGender(''); setBloodGroup(''); setPhone('')
       setEmail(''); setAddress(''); setNotes('')
       setError(null)
     }
@@ -67,8 +69,9 @@ export function AddPatientDialog({ onCreated, keepOpen }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: name.trim(),
-          age: age ? parseInt(age, 10) : null,
+          dateOfBirth: dateOfBirth || null,
           gender: gender || null,
+          bloodGroup: bloodGroup || null,
           phone: phone.trim() || null,
           email: email.trim() || null,
           address: address.trim() || null,
@@ -81,7 +84,7 @@ export function AddPatientDialog({ onCreated, keepOpen }: Props) {
       if (onCreated) onCreated(data.patient.id, data.patient.name)
       if (!keepOpen) close()
       else {
-        setName(''); setAge(''); setGender(''); setPhone('')
+        setName(''); setDateOfBirth(''); setGender(''); setBloodGroup(''); setPhone('')
         setEmail(''); setAddress(''); setNotes('')
       }
     } catch (err) {
@@ -110,8 +113,13 @@ export function AddPatientDialog({ onCreated, keepOpen }: Props) {
               <Input id="p-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" autoFocus />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="p-age">Age</Label>
-              <Input id="p-age" type="number" min={0} max={150} value={age} onChange={(e) => setAge(e.target.value)} placeholder="years" />
+              <Label htmlFor="p-dob">Date of birth</Label>
+              <Input id="p-dob" type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} max={new Date().toISOString().slice(0, 10)} />
+              {dateOfBirth && (
+                <p className="text-xs text-muted-foreground">
+                  Age: <span className="text-foreground font-medium">{calculateAge(dateOfBirth) != null ? `${calculateAge(dateOfBirth)}y` : 'invalid'}</span>
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="p-gender">Gender</Label>
@@ -123,6 +131,19 @@ export function AddPatientDialog({ onCreated, keepOpen }: Props) {
                   <SelectItem value="male">Male</SelectItem>
                   <SelectItem value="female">Female</SelectItem>
                   <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5 col-span-2">
+              <Label htmlFor="p-blood">Blood group</Label>
+              <Select value={bloodGroup} onValueChange={setBloodGroup}>
+                <SelectTrigger id="p-blood">
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Unknown'].map((bg) => (
+                    <SelectItem key={bg} value={bg}>{bg}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

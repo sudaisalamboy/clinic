@@ -63,8 +63,9 @@ export async function GET() {
     take: 5,
     select: {
       id: true,
+      patientCode: true,
       name: true,
-      age: true,
+      dateOfBirth: true,
       gender: true,
       phone: true,
       createdAt: true,

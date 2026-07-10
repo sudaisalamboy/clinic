@@ -72,19 +72,28 @@ model ActivityLog {
 // ---------- Clinic domain models ----------
 
 model Patient {
-  id        String   @id @default(cuid())
-  name      String
-  age       Int?
-  gender    String?
-  phone     String?
-  email     String?
-  address   String?
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String    @id @default(cuid())
+  /// Auto-generated human-readable code, e.g. PAT-2026-0001
+  patientCode String    @unique
+  name        String
+  /// Stored date of birth. Age is computed live in the UI from this.
+  dateOfBirth DateTime?
+  gender      String?
+  phone       String?
+  email       String?
+  address     String?
+  bloodGroup  String?
+  notes       String?
+  /// Active | Inactive. DELETE soft-deletes by setting this to Inactive.
+  status      String    @default("Active")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   appointments Appointment[]
   bills        Bill[]
+
+  @@index([status])
+  @@index([name])
 }
 
 model Appointment {
