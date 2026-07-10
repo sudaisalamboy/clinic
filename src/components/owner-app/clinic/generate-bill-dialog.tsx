@@ -44,6 +44,7 @@ interface Props {
 }
 
 interface LineItem {
+  category: 'medicine' | 'lab' | 'other'
   name: string
   qty: number
   price: number
@@ -56,17 +57,17 @@ export function GenerateBillDialog({ patients, medicines, onGenerated }: Props) 
 
   const [patientId, setPatientId] = useState('')
   const [items, setItems] = useState<LineItem[]>([
-    { name: 'Consultation', qty: 1, price: 50 },
+    { category: 'other', name: 'Consultation', qty: 1, price: 50 },
   ])
-  const [status, setStatus] = useState<'pending' | 'paid'>('pending')
+  const [status, setStatus] = useState<'Pending' | 'Paid'>('Pending')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (isOpen) {
       setPatientId(patients[0]?.id ?? '')
-      setItems([{ name: 'Consultation', qty: 1, price: 50 }])
-      setStatus('pending')
+      setItems([{ category: 'other', name: 'Consultation', qty: 1, price: 50 }])
+      setStatus('Pending')
       setError(null)
     }
   }, [isOpen, patients])
@@ -80,7 +81,7 @@ export function GenerateBillDialog({ patients, medicines, onGenerated }: Props) 
     setItems((prev) => prev.filter((_, idx) => idx !== i))
   }
   function addItem() {
-    setItems((prev) => [...prev, { name: '', qty: 1, price: 0 }])
+    setItems((prev) => [...prev, { category: 'other', name: '', qty: 1, price: 0 }])
   }
 
   function addMedicine(medId: string) {
@@ -88,7 +89,7 @@ export function GenerateBillDialog({ patients, medicines, onGenerated }: Props) 
     if (!med) return
     setItems((prev) => [
       ...prev,
-      { name: med.name, qty: 1, price: med.price },
+      { category: 'medicine', name: med.name, qty: 1, price: med.price },
     ])
   }
 
@@ -114,7 +115,9 @@ export function GenerateBillDialog({ patients, medicines, onGenerated }: Props) 
         body: JSON.stringify({
           patientId,
           items: cleaned,
-          status,
+          // Quick-action dialog uses simpler schema; status derived from initialPayment.
+          // For backward-compat: if user picked 'Paid' we record a full payment.
+          ...(status === 'Paid' ? { initialPayment: { amount: items.reduce((s, it) => s + it.qty * it.price, 0), method: 'Cash' as const } } : {}),
         }),
       })
       const data = await res.json()
@@ -235,13 +238,13 @@ export function GenerateBillDialog({ patients, medicines, onGenerated }: Props) 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Label htmlFor="b-status">Status</Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as 'pending' | 'paid')}>
+              <Select value={status} onValueChange={(v) => setStatus(v as 'Pending' | 'Paid')}>
                 <SelectTrigger id="b-status" className="w-[120px] h-8">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="Pending">Pending</SelectItem>
+                  <SelectItem value="Paid">Paid</SelectItem>
                 </SelectContent>
               </Select>
             </div>

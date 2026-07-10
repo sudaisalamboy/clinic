@@ -125,18 +125,72 @@ model Appointment {
 }
 
 model Bill {
-  id            String   @id @default(cuid())
-  patientId     String
-  patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  appointmentId String?  @unique
-  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
-  items         String   // JSON string of {name, qty, price}[]
-  total         Float
-  status        String   @default("pending") // pending | paid
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String   @id @default(cuid())
+  /// Auto-generated like BILL-2026-0001
+  billNumber      String   @unique
+  patientId       String
+  patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  appointmentId   String?  @unique
+  appointment     Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  doctorId        String?
+  doctor          Doctor?  @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+  /// JSON string of line items: [{category: 'medicine'|'lab'|'other', name, qty, price}]
+  items           String   @default("[]")
+  /// Doctor consultation fee (separate line for clarity)
+  consultationFee Float    @default(0)
+  /// Sum of medicine items
+  medicineCharges Float    @default(0)
+  /// Sum of lab items
+  labCharges      Float    @default(0)
+  /// Sum of other items
+  otherCharges    Float    @default(0)
+  /// Subtotal before discount and tax
+  subtotal        Float    @default(0)
+  /// Discount amount (computed from discountValue + discountType)
+  discountAmount  Float    @default(0)
+  /// "percent" | "fixed"
+  discountType    String   @default("fixed")
+  /// The raw discount value (e.g. 10 for 10% or $10)
+  discountValue   Float    @default(0)
+  /// Tax amount (computed from taxRate)
+  taxAmount       Float    @default(0)
+  /// Tax rate in percent (e.g. 8.5)
+  taxRate         Float    @default(0)
+  /// Final total after discount + tax
+  total           Float    @default(0)
+  /// Amount paid so far (sum of successful payments)
+  amountPaid      Float    @default(0)
+  /// Pending | Partial | Paid | Refunded
+  status          String   @default("Pending")
+  /// Default payment method for the bill
+  paymentMethod   String?  // Cash | Card | Online
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  payments Payment[]
 
   @@index([patientId])
+  @@index([doctorId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+/// Individual payment records for a bill (supports partial payments + refunds).
+model Payment {
+  id        String   @id @default(cuid())
+  billId    String
+  bill      Bill     @relation(fields: [billId], references: [id], onDelete: Cascade)
+  amount    Float
+  /// Cash | Card | Online
+  method    String   @default("Cash")
+  /// payment | refund
+  type      String   @default("payment")
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([billId])
+  @@index([createdAt])
 }
 
 model Medicine {
@@ -181,6 +235,7 @@ model Doctor {
 
   schedule     DoctorSchedule[]
   appointments Appointment[]
+  bills        Bill[]
 
   @@index([status])
   @@index([departmentId])

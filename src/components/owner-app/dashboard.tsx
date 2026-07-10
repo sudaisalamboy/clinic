@@ -33,7 +33,7 @@ import { ClinicDashboardPanel } from './clinic/panels/clinic-dashboard'
 import { PatientsPanel } from './clinic/panels/patients-panel'
 import { DoctorsPanel } from './clinic/panels/doctors-panel'
 import { AppointmentsPanel } from './clinic/panels/appointments/appointments-panel'
-import { BillsPanel } from './clinic/panels/bills'
+import { BillsPanel } from './clinic/panels/bills/bills-panel'
 import { InventoryPanel } from './clinic/panels/inventory'
 import { ReminderBanner } from './clinic/reminder-banner'
 
@@ -319,7 +319,11 @@ export function Dashboard({ owner, onLock }: Props) {
                 />
               </TabsContent>
               <TabsContent value="bills" className="mt-0">
-                <BillsPanel />
+                <BillsPanel
+                  patients={patientsForDialogs}
+                  doctors={doctorsForDialogs}
+                  medicines={medicinesForDialogs}
+                />
               </TabsContent>
               <TabsContent value="inventory" className="mt-0">
                 <InventoryPanel />
