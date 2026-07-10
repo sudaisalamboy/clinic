@@ -32,7 +32,7 @@ export async function GET() {
     owner: authenticated
       ? { id: current!.id, name: current!.name, autoLockMinutes: current!.autoLockMinutes }
       : owner
-        ? { name: owner.name }
+        ? { name: owner.name, passwordHint: owner.passwordHint }
         : null,
     lock,
   })

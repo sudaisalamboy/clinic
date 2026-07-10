@@ -15,6 +15,7 @@ import {
   Package,
   FileText,
   FlaskConical,
+  BarChart3,
   Settings as SettingsIcon,
   Activity,
 } from 'lucide-react'
@@ -39,6 +40,7 @@ import { BillsPanel } from './clinic/panels/bills/bills-panel'
 import { InventoryPanel } from './clinic/panels/inventory/inventory-panel'
 import { PrescriptionsPanel } from './clinic/panels/prescriptions/prescriptions-panel'
 import { LabTestsPanel } from './clinic/panels/lab-tests/lab-tests-panel'
+import { ReportsPanel } from './clinic/panels/reports/reports-panel'
 import { ReminderBanner } from './clinic/reminder-banner'
 import { InventoryAlertBanner } from './clinic/inventory-alert-banner'
 
@@ -261,7 +263,7 @@ export function Dashboard({ owner, onLock }: Props) {
           <ReminderBanner refreshKey={refreshKey} onOpenAppointment={() => setTab('appointments')} />
           <InventoryAlertBanner refreshKey={refreshKey} onOpenInventory={() => setTab('inventory')} />
           <Tabs value={tab} onValueChange={setTab}>
-            <TabsList className="grid w-full grid-cols-3 sm:grid-cols-12 mb-6 h-auto">
+            <TabsList className="grid w-full grid-cols-3 sm:grid-cols-13 mb-6 h-auto">
               <TabsTrigger value="clinic" className="gap-1.5 py-2">
                 <LayoutGrid className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Dashboard</span>
@@ -311,6 +313,11 @@ export function Dashboard({ owner, onLock }: Props) {
                 <Activity className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Activity</span>
                 <span className="sm:hidden">Logs</span>
+              </TabsTrigger>
+              <TabsTrigger value="reports" className="gap-1.5 py-2">
+                <BarChart3 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Reports</span>
+                <span className="sm:hidden">Rpt</span>
               </TabsTrigger>
               <TabsTrigger value="settings" className="gap-1.5 py-2">
                 <SettingsIcon className="h-3.5 w-3.5" />
@@ -372,6 +379,9 @@ export function Dashboard({ owner, onLock }: Props) {
               </TabsContent>
               <TabsContent value="activity" className="mt-0">
                 <ActivityPanel />
+              </TabsContent>
+              <TabsContent value="reports" className="mt-0">
+                <ReportsPanel />
               </TabsContent>
               <TabsContent value="settings" className="mt-0">
                 <SettingsPanel owner={owner} onAutoLockChange={(m) => setAutoLockMs(m * 60 * 1000)} onLock={onLock} />
