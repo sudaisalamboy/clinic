@@ -21,6 +21,7 @@ import {
   XCircle,
   DollarSign,
   FileText,
+  FlaskConical,
   StickyNote,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -64,6 +65,18 @@ interface Bill {
   status: string
   createdAt: string
 }
+interface LabTestEntry {
+  id: string
+  testNumber: string
+  status: string
+  resultNotes: string | null
+  resultFile: string | null
+  resultValues: { parameter: string; value: string; unit: string | null; flag: string | null }[]
+  requestedAt: string
+  completedAt: string | null
+  labTest: { id: string; name: string; category: string | null; price: number; referenceRange: string | null }
+  doctor: { id: string; name: string } | null
+}
 interface Patient {
   id: string
   patientCode: string
@@ -79,7 +92,8 @@ interface Patient {
   createdAt: string
   appointments: Appointment[]
   bills: Bill[]
-  _count: { appointments: number; bills: number }
+  labTests: LabTestEntry[]
+  _count: { appointments: number; bills: number; labTests: number }
 }
 
 interface Props {
@@ -310,7 +324,7 @@ export function PatientProfileView({ patientId, onBack, onEdit, onChanged }: Pro
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="appointments">
-                <TabsList className="grid grid-cols-2 mb-4">
+                <TabsList className="grid grid-cols-3 mb-4">
                   <TabsTrigger value="appointments" className="gap-1.5">
                     <CalendarPlus className="h-3.5 w-3.5" />
                     Appointments ({patient.appointments.length})
@@ -318,6 +332,10 @@ export function PatientProfileView({ patientId, onBack, onEdit, onChanged }: Pro
                   <TabsTrigger value="bills" className="gap-1.5">
                     <ReceiptText className="h-3.5 w-3.5" />
                     Bills ({patient.bills.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="labs" className="gap-1.5">
+                    <FlaskConical className="h-3.5 w-3.5" />
+                    Lab Tests ({patient.labTests.length})
                   </TabsTrigger>
                 </TabsList>
 
@@ -419,6 +437,76 @@ export function PatientProfileView({ patientId, onBack, onEdit, onChanged }: Pro
                             </div>
                           </motion.div>
                         ))}
+                      </div>
+                    </ScrollArea>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="labs" className="mt-0">
+                  {patient.labTests.length === 0 ? (
+                    <EmptyState
+                      icon={<FlaskConical className="h-8 w-8" />}
+                      title="No lab tests yet"
+                    />
+                  ) : (
+                    <ScrollArea className="max-h-[60vh] pr-3">
+                      <div className="space-y-2">
+                        {patient.labTests.map((t, i) => {
+                          const labStatusMeta: Record<string, { cls: string; dotCls: string }> = {
+                            Pending: { cls: 'border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/5', dotCls: 'bg-amber-500' },
+                            'In Progress': { cls: 'border-sky-500/40 text-sky-600 dark:text-sky-400 bg-sky-500/5', dotCls: 'bg-sky-500' },
+                            Completed: { cls: 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5', dotCls: 'bg-emerald-500' },
+                          }
+                          const meta = labStatusMeta[t.status] ?? labStatusMeta.Pending
+                          return (
+                            <motion.div
+                              key={t.id}
+                              initial={{ opacity: 0, y: 4 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: Math.min(i * 0.04, 0.2) }}
+                              className="rounded-lg border bg-card p-3"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <Badge variant="outline" className={`text-xs font-normal ${meta.cls}`}>
+                                      <span className={`inline-block h-1.5 w-1.5 rounded-full ${meta.dotCls}`} />
+                                      {t.status}
+                                    </Badge>
+                                    <span className="font-mono text-xs text-muted-foreground">{t.testNumber}</span>
+                                    <span className="text-sm font-medium">{t.labTest.name}</span>
+                                    {t.labTest.category && (
+                                      <Badge variant="outline" className="text-xs font-normal">{t.labTest.category}</Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Requested {formatDateTime(t.requestedAt)}
+                                    {t.doctor ? ` · Dr. ${t.doctor.name}` : ''}
+                                    {t.completedAt ? ` · Completed ${formatDate(t.completedAt)}` : ''}
+                                  </p>
+                                  {t.resultValues.length > 0 && (
+                                    <div className="mt-2 space-y-0.5">
+                                      {t.resultValues.slice(0, 4).map((rv, j) => (
+                                        <div key={j} className="flex justify-between text-xs">
+                                          <span className="text-muted-foreground">{rv.parameter}: <span className="text-foreground font-medium">{rv.value}</span> {rv.unit ?? ''}</span>
+                                          {rv.flag && rv.flag !== 'Normal' && rv.flag !== '' && (
+                                            <Badge variant="outline" className="text-[10px] font-normal border-rose-500/40 text-rose-600">{rv.flag}</Badge>
+                                          )}
+                                        </div>
+                                      ))}
+                                      {t.resultValues.length > 4 && (
+                                        <p className="text-[10px] text-muted-foreground">+{t.resultValues.length - 4} more</p>
+                                      )}
+                                    </div>
+                                  )}
+                                  {t.resultNotes && (
+                                    <p className="text-xs text-muted-foreground/70 mt-1 italic line-clamp-2">{t.resultNotes}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </motion.div>
+                          )
+                        })}
                       </div>
                     </ScrollArea>
                   )}

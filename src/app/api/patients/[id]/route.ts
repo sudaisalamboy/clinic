@@ -41,7 +41,14 @@ export async function GET(
       bills: {
         orderBy: { createdAt: 'desc' },
       },
-      _count: { select: { appointments: true, bills: true } },
+      labTests: {
+        orderBy: { createdAt: 'desc' },
+        include: {
+          labTest: { select: { id: true, name: true, category: true, price: true, referenceRange: true } },
+          doctor: { select: { id: true, name: true } },
+        },
+      },
+      _count: { select: { appointments: true, bills: true, labTests: true } },
     },
   })
   if (!patient) {
@@ -54,10 +61,17 @@ export async function GET(
     items: JSON.parse(b.items),
   }))
 
+  // Parse lab test result values JSON for the client
+  const labTests = patient.labTests.map((t) => ({
+    ...t,
+    resultValues: JSON.parse(t.resultValues),
+  }))
+
   return NextResponse.json({
     patient: {
       ...patient,
       bills,
+      labTests,
     },
   })
 }

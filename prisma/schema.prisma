@@ -93,6 +93,7 @@ model Patient {
   bills        Bill[]
   medicalRecords MedicalRecord[]
   prescriptions Prescription[]
+  labTests    PatientLabTest[]
 
   @@index([status])
   @@index([name])
@@ -281,7 +282,67 @@ model Prescription {
   @@index([createdAt])
 }
 
-// ---------- Doctor & Department ----------
+// ---------- Lab Tests ----------
+
+/// Catalog of available lab tests (e.g. "Complete Blood Count", "Lipid Panel").
+model LabTest {
+  id            String   @id @default(cuid())
+  name          String
+  category      String?  // e.g. "Hematology", "Biochemistry", "Microbiology"
+  description   String?
+  price         Float    @default(0)
+  /// Normal reference range, e.g. "4.5-11.0 ×10^9/L"
+  referenceRange String?
+  /// Sample type, e.g. "Blood", "Urine", "Swab"
+  sampleType    String?
+  /// Estimated turnaround in hours
+  turnaroundHours Int?
+  status        String   @default("Active") // Active | Inactive
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  patientTests PatientLabTest[]
+
+  @@index([name])
+  @@index([category])
+  @@index([status])
+}
+
+/// A lab test assigned to a patient (linked to an appointment optionally).
+model PatientLabTest {
+  id            String   @id @default(cuid())
+  /// Auto-generated like LT-2026-0001
+  testNumber    String   @unique
+  patientId     String
+  patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  labTestId     String
+  labTest       LabTest  @relation(fields: [labTestId], references: [id], onDelete: Cascade)
+  doctorId      String?
+  doctor        Doctor?  @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+  appointmentId String?
+  /// Pending | In Progress | Completed
+  status        String   @default("Pending")
+  /// Result values entered by the lab tech (JSON: [{parameter, value, unit, flag}])
+  resultValues  String   @default("[]")
+  /// Lab technician notes / interpretation
+  resultNotes   String?
+  /// Filename of uploaded result file (PDF/image) — stored in /public/uploads/lab-results/
+  resultFile    String?
+  /// Original filename of the uploaded file
+  resultFileName String?
+  /// MIME type of the uploaded file
+  resultFileType String?
+  requestedAt   DateTime @default(now())
+  completedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([patientId])
+  @@index([labTestId])
+  @@index([doctorId])
+  @@index([status])
+  @@index([testNumber])
+}
 
 model Department {
   id          String   @id @default(cuid())
@@ -315,6 +376,7 @@ model Doctor {
   bills        Bill[]
   medicalRecords MedicalRecord[]
   prescriptions Prescription[]
+  labTests    PatientLabTest[]
 
   @@index([status])
   @@index([departmentId])

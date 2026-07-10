@@ -14,6 +14,7 @@ import {
   ReceiptText,
   Package,
   FileText,
+  FlaskConical,
   Settings as SettingsIcon,
   Activity,
 } from 'lucide-react'
@@ -37,6 +38,7 @@ import { AppointmentsPanel } from './clinic/panels/appointments/appointments-pan
 import { BillsPanel } from './clinic/panels/bills/bills-panel'
 import { InventoryPanel } from './clinic/panels/inventory/inventory-panel'
 import { PrescriptionsPanel } from './clinic/panels/prescriptions/prescriptions-panel'
+import { LabTestsPanel } from './clinic/panels/lab-tests/lab-tests-panel'
 import { ReminderBanner } from './clinic/reminder-banner'
 import { InventoryAlertBanner } from './clinic/inventory-alert-banner'
 
@@ -259,7 +261,7 @@ export function Dashboard({ owner, onLock }: Props) {
           <ReminderBanner refreshKey={refreshKey} onOpenAppointment={() => setTab('appointments')} />
           <InventoryAlertBanner refreshKey={refreshKey} onOpenInventory={() => setTab('inventory')} />
           <Tabs value={tab} onValueChange={setTab}>
-            <TabsList className="grid w-full grid-cols-3 sm:grid-cols-11 mb-6 h-auto">
+            <TabsList className="grid w-full grid-cols-3 sm:grid-cols-12 mb-6 h-auto">
               <TabsTrigger value="clinic" className="gap-1.5 py-2">
                 <LayoutGrid className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Dashboard</span>
@@ -291,6 +293,11 @@ export function Dashboard({ owner, onLock }: Props) {
                 <FileText className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Rx</span>
                 <span className="sm:hidden">Rx</span>
+              </TabsTrigger>
+              <TabsTrigger value="labs" className="gap-1.5 py-2">
+                <FlaskConical className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Labs</span>
+                <span className="sm:hidden">Lab</span>
               </TabsTrigger>
               <TabsTrigger value="notes" className="gap-1.5 py-2">
                 <span className="hidden sm:inline">Notes</span>
@@ -349,6 +356,12 @@ export function Dashboard({ owner, onLock }: Props) {
                   patients={patientsForDialogs}
                   doctors={doctorsForDialogs}
                   medicines={medicinesForDialogs}
+                />
+              </TabsContent>
+              <TabsContent value="labs" className="mt-0">
+                <LabTestsPanel
+                  patients={patientsForDialogs}
+                  doctors={doctorsForDialogs}
                 />
               </TabsContent>
               <TabsContent value="notes" className="mt-0">
