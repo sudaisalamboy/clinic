@@ -68,3 +68,65 @@ model ActivityLog {
   ip        String?
   createdAt DateTime @default(now())
 }
+
+// ---------- Clinic domain models ----------
+
+model Patient {
+  id        String   @id @default(cuid())
+  name      String
+  age       Int?
+  gender    String?
+  phone     String?
+  email     String?
+  address   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  appointments Appointment[]
+  bills        Bill[]
+}
+
+model Appointment {
+  id          String   @id @default(cuid())
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  scheduledAt DateTime
+  reason      String?
+  status      String   @default("pending") // pending | completed | cancelled
+  fee         Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  bill Bill?
+
+  @@index([patientId])
+  @@index([scheduledAt])
+}
+
+model Bill {
+  id            String   @id @default(cuid())
+  patientId     String
+  patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  appointmentId String?  @unique
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  items         String   // JSON string of {name, qty, price}[]
+  total         Float
+  status        String   @default("pending") // pending | paid
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([patientId])
+}
+
+model Medicine {
+  id           String   @id @default(cuid())
+  name         String
+  sku          String?  @unique
+  quantity     Int      @default(0)
+  price        Float    @default(0)
+  reorderLevel Int      @default(10)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+

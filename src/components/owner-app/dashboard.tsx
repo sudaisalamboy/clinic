@@ -8,8 +8,10 @@ import {
   Shield,
   Clock,
   LayoutGrid,
-  StickyNote,
-  Link2,
+  Users,
+  CalendarCheck,
+  ReceiptText,
+  Package,
   Settings as SettingsIcon,
   Activity,
 } from 'lucide-react'
@@ -22,6 +24,15 @@ import { NotesPanel } from './panels/notes'
 import { LinksPanel } from './panels/links'
 import { SettingsPanel } from './panels/settings'
 import { ActivityPanel } from './panels/activity'
+import {
+  QuickActionsProvider,
+} from './clinic/quick-actions-context'
+import { QuickActionsHost } from './clinic/quick-actions-host'
+import { ClinicDashboardPanel } from './clinic/panels/clinic-dashboard'
+import { PatientsPanel } from './clinic/panels/patients'
+import { AppointmentsPanel } from './clinic/panels/appointments'
+import { BillsPanel } from './clinic/panels/bills'
+import { InventoryPanel } from './clinic/panels/inventory'
 
 interface OwnerInfo {
   id: string
@@ -48,7 +59,16 @@ function fmtRemaining(ms: number): string {
 
 export function Dashboard({ owner, onLock }: Props) {
   const [autoLockMs, setAutoLockMs] = useState(owner.autoLockMinutes * 60 * 1000)
-  const [tab, setTab] = useState('overview')
+  const [tab, setTab] = useState('clinic')
+  // refreshKey bumps trigger a re-fetch in dashboard/patients/etc. after a quick action.
+  const [refreshKey, setRefreshKey] = useState(0)
+  // Lightweight lists of patients + medicines for the quick action dialogs.
+  const [patientsForDialogs, setPatientsForDialogs] = useState<
+    { id: string; name: string; phone?: string | null }[]
+  >([])
+  const [medicinesForDialogs, setMedicinesForDialogs] = useState<
+    { id: string; name: string; price: number; quantity: number }[]
+  >([])
 
   // Periodically extend the session while the user is active (every 60s).
   const extend = useCallback(async () => {
@@ -77,23 +97,46 @@ export function Dashboard({ owner, onLock }: Props) {
     return () => clearInterval(id)
   }, [extend])
 
-  // Lock when tab is hidden for too long (e.g. user walks away with phone in pocket)
-  // We don't lock immediately on hidden — just stop extending.
-  useEffect(() => {
-    const onHide = () => {
-      if (document.visibilityState === 'hidden') {
-        // do nothing here — natural idle timer will fire if hidden long enough
-      }
-    }
-    document.addEventListener('visibilitychange', onHide)
-    return () => document.removeEventListener('visibilitychange', onHide)
-  }, [])
-
-  // Lock on browser back/forward or unload? No — that would be annoying.
-
   // Show "warning" state when less than 60s left
   const warning = remainingMs <= 60_000
   const danger = remainingMs <= 15_000
+
+  // Load lightweight patient + medicine lists for the quick action dialogs.
+  const refreshDialogData = useCallback(async () => {
+    try {
+      const [pRes, mRes] = await Promise.all([
+        fetch('/api/patients'),
+        fetch('/api/medicines'),
+      ])
+      if (pRes.ok) {
+        const d = await pRes.json()
+        setPatientsForDialogs(
+          (d.patients ?? []).slice(0, 50).map((p: { id: string; name: string; phone?: string | null }) => ({
+            id: p.id,
+            name: p.name,
+            phone: p.phone ?? null,
+          })),
+        )
+      }
+      if (mRes.ok) {
+        const d = await mRes.json()
+        setMedicinesForDialogs(
+          (d.medicines ?? []).slice(0, 100).map((m: { id: string; name: string; price: number; quantity: number }) => ({
+            id: m.id,
+            name: m.name,
+            price: m.price,
+            quantity: m.quantity,
+          })),
+        )
+      }
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  useEffect(() => {
+    void refreshDialogData()
+  }, [refreshDialogData, refreshKey])
 
   async function handleManualLock() {
     try {
@@ -114,103 +157,143 @@ export function Dashboard({ owner, onLock }: Props) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-muted/30">
-      {/* Top bar */}
-      <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/20 shrink-0">
-              <Shield className="h-4.5 w-4.5 text-primary" />
+    <QuickActionsProvider>
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-muted/30">
+        {/* Top bar */}
+        <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/20 shrink-0">
+                <Shield className="h-4.5 w-4.5 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold leading-tight truncate">Clinic Vault</p>
+                <p className="text-xs text-muted-foreground truncate">{owner.name}</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold leading-tight truncate">Owner Vault</p>
-              <p className="text-xs text-muted-foreground truncate">{owner.name}</p>
+
+            <div className="flex items-center gap-2">
+              <Badge
+                variant="outline"
+                className={`hidden sm:inline-flex tabular-nums font-mono gap-1.5 ${
+                  danger
+                    ? 'border-destructive/50 text-destructive bg-destructive/5'
+                    : warning
+                      ? 'border-amber-500/50 text-amber-600 dark:text-amber-400 bg-amber-500/5'
+                      : 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5'
+                }`}
+                title="Time until auto-lock"
+              >
+                <Clock className="h-3 w-3" />
+                {fmtRemaining(remainingMs)}
+              </Badge>
+              <Button size="sm" variant="outline" onClick={handleManualLock} className="gap-1.5">
+                <Lock className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Lock</span>
+              </Button>
+              <Button size="sm" variant="ghost" onClick={handleLogout} className="gap-1.5 text-muted-foreground">
+                <LogOut className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Sign out</span>
+              </Button>
             </div>
           </div>
+        </header>
 
-          <div className="flex items-center gap-2">
-            <Badge
-              variant="outline"
-              className={`hidden sm:inline-flex tabular-nums font-mono gap-1.5 ${
-                danger
-                  ? 'border-destructive/50 text-destructive bg-destructive/5'
-                  : warning
-                    ? 'border-amber-500/50 text-amber-600 dark:text-amber-400 bg-amber-500/5'
-                    : 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5'
-              }`}
-              title="Time until auto-lock"
+        {/* Main */}
+        <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-6">
+          <Tabs value={tab} onValueChange={setTab}>
+            <TabsList className="grid w-full grid-cols-3 sm:grid-cols-9 mb-6 h-auto">
+              <TabsTrigger value="clinic" className="gap-1.5 py-2">
+                <LayoutGrid className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Dashboard</span>
+                <span className="sm:hidden">Home</span>
+              </TabsTrigger>
+              <TabsTrigger value="patients" className="gap-1.5 py-2">
+                <Users className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Patients</span>
+              </TabsTrigger>
+              <TabsTrigger value="appointments" className="gap-1.5 py-2">
+                <CalendarCheck className="h-3.5 w-3.5" />
+                <span className="hidden lg:inline">Appts</span>
+                <span className="hidden sm:inline lg:hidden">Appts</span>
+              </TabsTrigger>
+              <TabsTrigger value="bills" className="gap-1.5 py-2">
+                <ReceiptText className="h-3.5 w-3.5" />
+                Bills
+              </TabsTrigger>
+              <TabsTrigger value="inventory" className="gap-1.5 py-2">
+                <Package className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Inventory</span>
+                <span className="sm:hidden">Stock</span>
+              </TabsTrigger>
+              <TabsTrigger value="notes" className="gap-1.5 py-2">
+                {/* Notes is hidden on small screens to save space */}
+                <span className="hidden sm:inline">Notes</span>
+                <span className="sm:hidden">Notes</span>
+              </TabsTrigger>
+              <TabsTrigger value="links" className="gap-1.5 py-2">
+                <span className="hidden sm:inline">Links</span>
+                <span className="sm:hidden">Links</span>
+              </TabsTrigger>
+              <TabsTrigger value="activity" className="gap-1.5 py-2">
+                <Activity className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Activity</span>
+                <span className="sm:hidden">Logs</span>
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="gap-1.5 py-2">
+                <SettingsIcon className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Settings</span>
+              </TabsTrigger>
+            </TabsList>
+
+            <motion.div
+              key={tab}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
             >
-              <Clock className="h-3 w-3" />
-              {fmtRemaining(remainingMs)}
-            </Badge>
-            <Button size="sm" variant="outline" onClick={handleManualLock} className="gap-1.5">
-              <Lock className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Lock</span>
-            </Button>
-            <Button size="sm" variant="ghost" onClick={handleLogout} className="gap-1.5 text-muted-foreground">
-              <LogOut className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Sign out</span>
-            </Button>
-          </div>
-        </div>
-      </header>
+              <TabsContent value="clinic" className="mt-0">
+                <ClinicDashboardPanel onGoTo={setTab} refreshKey={refreshKey} />
+              </TabsContent>
+              <TabsContent value="patients" className="mt-0">
+                <PatientsPanel />
+              </TabsContent>
+              <TabsContent value="appointments" className="mt-0">
+                <AppointmentsPanel />
+              </TabsContent>
+              <TabsContent value="bills" className="mt-0">
+                <BillsPanel />
+              </TabsContent>
+              <TabsContent value="inventory" className="mt-0">
+                <InventoryPanel />
+              </TabsContent>
+              <TabsContent value="notes" className="mt-0">
+                <NotesPanel />
+              </TabsContent>
+              <TabsContent value="links" className="mt-0">
+                <LinksPanel />
+              </TabsContent>
+              <TabsContent value="activity" className="mt-0">
+                <ActivityPanel />
+              </TabsContent>
+              <TabsContent value="settings" className="mt-0">
+                <SettingsPanel owner={owner} onAutoLockChange={(m) => setAutoLockMs(m * 60 * 1000)} onLock={onLock} />
+              </TabsContent>
+            </motion.div>
+          </Tabs>
+        </main>
 
-      {/* Main */}
-      <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-6">
-        <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 mb-6 h-auto">
-            <TabsTrigger value="overview" className="gap-1.5 py-2">
-              <LayoutGrid className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Overview</span>
-              <span className="sm:hidden">Home</span>
-            </TabsTrigger>
-            <TabsTrigger value="notes" className="gap-1.5 py-2">
-              <StickyNote className="h-3.5 w-3.5" />
-              Notes
-            </TabsTrigger>
-            <TabsTrigger value="links" className="gap-1.5 py-2">
-              <Link2 className="h-3.5 w-3.5" />
-              Links
-            </TabsTrigger>
-            <TabsTrigger value="activity" className="gap-1.5 py-2">
-              <Activity className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Activity</span>
-              <span className="sm:hidden">Logs</span>
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="gap-1.5 py-2">
-              <SettingsIcon className="h-3.5 w-3.5" />
-              Settings
-            </TabsTrigger>
-          </TabsList>
+        <footer className="mt-auto border-t bg-background/60 py-4 text-center text-xs text-muted-foreground">
+          <p>Single-owner clinic vault. Auto-locks after {owner.autoLockMinutes}m of inactivity.</p>
+        </footer>
 
-          <motion.div
-            key={tab}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <TabsContent value="overview" className="mt-0">
-              <OverviewPanel owner={owner} onGoTo={setTab} />
-            </TabsContent>
-            <TabsContent value="notes" className="mt-0">
-              <NotesPanel />
-            </TabsContent>
-            <TabsContent value="links" className="mt-0">
-              <LinksPanel />
-            </TabsContent>
-            <TabsContent value="activity" className="mt-0">
-              <ActivityPanel />
-            </TabsContent>
-            <TabsContent value="settings" className="mt-0">
-              <SettingsPanel owner={owner} onAutoLockChange={(m) => setAutoLockMs(m * 60 * 1000)} onLock={onLock} />
-            </TabsContent>
-          </motion.div>
-        </Tabs>
-      </main>
-
-      <footer className="mt-auto border-t bg-background/60 py-4 text-center text-xs text-muted-foreground">
-        <p>Single-owner vault. Your data stays in this browser session only.</p>
-      </footer>
-    </div>
+        {/* Quick-action modals — mounted once, controlled by context */}
+        <QuickActionsHost
+          patients={patientsForDialogs}
+          medicines={medicinesForDialogs}
+          onAnyChange={() => setRefreshKey((k) => k + 1)}
+        />
+      </div>
+    </QuickActionsProvider>
   )
 }
