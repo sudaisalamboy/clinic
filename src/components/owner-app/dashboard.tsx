@@ -34,8 +34,9 @@ import { PatientsPanel } from './clinic/panels/patients-panel'
 import { DoctorsPanel } from './clinic/panels/doctors-panel'
 import { AppointmentsPanel } from './clinic/panels/appointments/appointments-panel'
 import { BillsPanel } from './clinic/panels/bills/bills-panel'
-import { InventoryPanel } from './clinic/panels/inventory'
+import { InventoryPanel } from './clinic/panels/inventory/inventory-panel'
 import { ReminderBanner } from './clinic/reminder-banner'
+import { InventoryAlertBanner } from './clinic/inventory-alert-banner'
 
 interface OwnerInfo {
   id: string
@@ -247,6 +248,7 @@ export function Dashboard({ owner, onLock }: Props) {
         {/* Main */}
         <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-6">
           <ReminderBanner refreshKey={refreshKey} onOpenAppointment={() => setTab('appointments')} />
+          <InventoryAlertBanner refreshKey={refreshKey} onOpenInventory={() => setTab('inventory')} />
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList className="grid w-full grid-cols-3 sm:grid-cols-10 mb-6 h-auto">
               <TabsTrigger value="clinic" className="gap-1.5 py-2">

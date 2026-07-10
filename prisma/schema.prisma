@@ -194,14 +194,32 @@ model Payment {
 }
 
 model Medicine {
-  id           String   @id @default(cuid())
-  name         String
-  sku          String?  @unique
-  quantity     Int      @default(0)
-  price        Float    @default(0)
-  reorderLevel Int      @default(10)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String    @id @default(cuid())
+  name          String
+  /// Brand name on the package, e.g. "Tylenol"
+  genericName   String?
+  sku           String?   @unique
+  manufacturer  String?
+  /// Batch number for traceability
+  batchNumber   String?
+  /// Stock on hand
+  quantity      Int       @default(0)
+  /// Selling price per unit
+  price         Float     @default(0)
+  /// Purchase (cost) price per unit
+  purchasePrice Float     @default(0)
+  /// Threshold below which a reorder alert fires
+  reorderLevel  Int       @default(10)
+  /// Expiry date of the current batch
+  expiryDate    DateTime?
+  description   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([name])
+  @@index([manufacturer])
+  @@index([expiryDate])
+  @@index([quantity])
 }
 
 // ---------- Doctor & Department ----------
