@@ -9,6 +9,7 @@ import {
   Clock,
   LayoutGrid,
   Users,
+  Stethoscope,
   CalendarCheck,
   ReceiptText,
   Package,
@@ -30,6 +31,7 @@ import {
 import { QuickActionsHost } from './clinic/quick-actions-host'
 import { ClinicDashboardPanel } from './clinic/panels/clinic-dashboard'
 import { PatientsPanel } from './clinic/panels/patients-panel'
+import { DoctorsPanel } from './clinic/panels/doctors-panel'
 import { AppointmentsPanel } from './clinic/panels/appointments'
 import { BillsPanel } from './clinic/panels/bills'
 import { InventoryPanel } from './clinic/panels/inventory'
@@ -69,6 +71,15 @@ export function Dashboard({ owner, onLock }: Props) {
   const [medicinesForDialogs, setMedicinesForDialogs] = useState<
     { id: string; name: string; price: number; quantity: number }[]
   >([])
+  const [doctorsForDialogs, setDoctorsForDialogs] = useState<
+    {
+      id: string
+      name: string
+      specialization: string | null
+      consultationFee: number
+      department?: { name: string } | null
+    }[]
+  >([])
 
   // Periodically extend the session while the user is active (every 60s).
   const extend = useCallback(async () => {
@@ -101,12 +112,13 @@ export function Dashboard({ owner, onLock }: Props) {
   const warning = remainingMs <= 60_000
   const danger = remainingMs <= 15_000
 
-  // Load lightweight patient + medicine lists for the quick action dialogs.
+  // Load lightweight patient + medicine + doctor lists for the quick action dialogs.
   const refreshDialogData = useCallback(async () => {
     try {
-      const [pRes, mRes] = await Promise.all([
+      const [pRes, mRes, dRes] = await Promise.all([
         fetch('/api/patients'),
         fetch('/api/medicines'),
+        fetch('/api/doctors?limit=100'),
       ])
       if (pRes.ok) {
         const d = await pRes.json()
@@ -126,6 +138,24 @@ export function Dashboard({ owner, onLock }: Props) {
             name: m.name,
             price: m.price,
             quantity: m.quantity,
+          })),
+        )
+      }
+      if (dRes.ok) {
+        const d = await dRes.json()
+        setDoctorsForDialogs(
+          (d.doctors ?? []).slice(0, 100).map((doc: {
+            id: string
+            name: string
+            specialization: string | null
+            consultationFee: number
+            department?: { name: string } | null
+          }) => ({
+            id: doc.id,
+            name: doc.name,
+            specialization: doc.specialization,
+            consultationFee: doc.consultationFee,
+            department: doc.department ?? null,
           })),
         )
       }
@@ -202,7 +232,7 @@ export function Dashboard({ owner, onLock }: Props) {
         {/* Main */}
         <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-6">
           <Tabs value={tab} onValueChange={setTab}>
-            <TabsList className="grid w-full grid-cols-3 sm:grid-cols-9 mb-6 h-auto">
+            <TabsList className="grid w-full grid-cols-3 sm:grid-cols-10 mb-6 h-auto">
               <TabsTrigger value="clinic" className="gap-1.5 py-2">
                 <LayoutGrid className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Dashboard</span>
@@ -211,6 +241,10 @@ export function Dashboard({ owner, onLock }: Props) {
               <TabsTrigger value="patients" className="gap-1.5 py-2">
                 <Users className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Patients</span>
+              </TabsTrigger>
+              <TabsTrigger value="doctors" className="gap-1.5 py-2">
+                <Stethoscope className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Doctors</span>
               </TabsTrigger>
               <TabsTrigger value="appointments" className="gap-1.5 py-2">
                 <CalendarCheck className="h-3.5 w-3.5" />
@@ -227,7 +261,6 @@ export function Dashboard({ owner, onLock }: Props) {
                 <span className="sm:hidden">Stock</span>
               </TabsTrigger>
               <TabsTrigger value="notes" className="gap-1.5 py-2">
-                {/* Notes is hidden on small screens to save space */}
                 <span className="hidden sm:inline">Notes</span>
                 <span className="sm:hidden">Notes</span>
               </TabsTrigger>
@@ -257,6 +290,9 @@ export function Dashboard({ owner, onLock }: Props) {
               </TabsContent>
               <TabsContent value="patients" className="mt-0">
                 <PatientsPanel />
+              </TabsContent>
+              <TabsContent value="doctors" className="mt-0">
+                <DoctorsPanel />
               </TabsContent>
               <TabsContent value="appointments" className="mt-0">
                 <AppointmentsPanel />
@@ -291,6 +327,7 @@ export function Dashboard({ owner, onLock }: Props) {
         <QuickActionsHost
           patients={patientsForDialogs}
           medicines={medicinesForDialogs}
+          doctors={doctorsForDialogs}
           onAnyChange={() => setRefreshKey((k) => k + 1)}
         />
       </div>

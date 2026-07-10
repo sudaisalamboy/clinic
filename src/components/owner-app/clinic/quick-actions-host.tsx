@@ -16,10 +16,18 @@ interface MedicineOption {
   price: number
   quantity: number
 }
+interface DoctorOption {
+  id: string
+  name: string
+  specialization: string | null
+  consultationFee: number
+  department?: { name: string } | null
+}
 
 interface Props {
   patients: PatientOption[]
   medicines: MedicineOption[]
+  doctors: DoctorOption[]
   onAnyChange: () => void
 }
 
@@ -33,7 +41,7 @@ interface Props {
  * the full patient list. Entries are pruned once they appear in the
  * parent-supplied `patients` array (id match).
  */
-export function QuickActionsHost({ patients, medicines, onAnyChange }: Props) {
+export function QuickActionsHost({ patients, medicines, doctors, onAnyChange }: Props) {
   const [extraPatients, setExtraPatients] = useState<PatientOption[]>([])
 
   // Remove extras that are now present in the canonical patients list.
@@ -52,6 +60,7 @@ export function QuickActionsHost({ patients, medicines, onAnyChange }: Props) {
       />
       <BookAppointmentDialog
         patients={allPatients}
+        doctors={doctors}
         onBooked={onAnyChange}
       />
       <GenerateBillDialog

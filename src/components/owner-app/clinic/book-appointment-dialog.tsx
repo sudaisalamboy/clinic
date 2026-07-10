@@ -30,19 +30,28 @@ interface PatientOption {
   name: string
   phone?: string | null
 }
+interface DoctorOption {
+  id: string
+  name: string
+  specialization: string | null
+  consultationFee: number
+  department?: { name: string } | null
+}
 
 interface Props {
   patients: PatientOption[]
+  doctors: DoctorOption[]
   onPatientsChange?: () => void
   onBooked?: () => void
 }
 
-export function BookAppointmentDialog({ patients, onPatientsChange, onBooked }: Props) {
+export function BookAppointmentDialog({ patients, doctors, onPatientsChange, onBooked }: Props) {
   const { open, openAction, close } = useQuickActions()
   const isOpen = open === 'book-appointment'
   const { toast } = useToast()
 
   const [patientId, setPatientId] = useState('')
+  const [doctorId, setDoctorId] = useState('')
   const [scheduledAt, setScheduledAt] = useState(defaultAppointmentTime())
   const [reason, setReason] = useState('')
   const [fee, setFee] = useState('')
@@ -52,12 +61,22 @@ export function BookAppointmentDialog({ patients, onPatientsChange, onBooked }: 
   useEffect(() => {
     if (isOpen) {
       setPatientId(patients[0]?.id ?? '')
+      setDoctorId('')
       setScheduledAt(defaultAppointmentTime())
       setReason('')
       setFee('')
       setError(null)
     }
   }, [isOpen, patients])
+
+  // When a doctor is selected, auto-fill the fee from their consultationFee
+  useEffect(() => {
+    if (!doctorId) return
+    const doc = doctors.find((d) => d.id === doctorId)
+    if (doc && !fee) {
+      setFee(String(doc.consultationFee))
+    }
+  }, [doctorId, doctors, fee])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -73,6 +92,7 @@ export function BookAppointmentDialog({ patients, onPatientsChange, onBooked }: 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           patientId,
+          doctorId: doctorId || null,
           scheduledAt: new Date(scheduledAt).toISOString(),
           reason: reason.trim() || null,
           fee: fee ? parseFloat(fee) : 0,
@@ -134,6 +154,22 @@ export function BookAppointmentDialog({ patients, onPatientsChange, onBooked }: 
                 No patients yet. Click the + button to add one.
               </p>
             )}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="a-doctor">Doctor (optional)</Label>
+            <Select value={doctorId} onValueChange={setDoctorId}>
+              <SelectTrigger id="a-doctor">
+                <SelectValue placeholder="Unassigned" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">— Unassigned —</SelectItem>
+                {doctors.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.name}{d.specialization ? ` · ${d.specialization}` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="a-when">When</Label>

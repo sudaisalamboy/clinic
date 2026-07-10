@@ -9,6 +9,7 @@ const AppointmentSchema = z.object({
   reason: z.string().max(500).optional().nullable(),
   status: z.enum(['pending', 'completed', 'cancelled']).default('pending'),
   fee: z.number().min(0).default(0),
+  doctorId: z.string().optional().nullable(),
 })
 
 export async function GET(req: NextRequest) {
@@ -21,15 +22,17 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url)
   const status = url.searchParams.get('status')
   const patientId = url.searchParams.get('patientId')
+  const doctorId = url.searchParams.get('doctorId')
 
   const where: Record<string, unknown> = {}
   if (status) where.status = status
   if (patientId) where.patientId = patientId
+  if (doctorId) where.doctorId = doctorId
 
   const appointments = await db.appointment.findMany({
     where,
     orderBy: { scheduledAt: 'desc' },
-    include: { patient: true },
+    include: { patient: true, doctor: { include: { department: true } } },
     take: 200,
   })
 
@@ -59,15 +62,23 @@ export async function POST(req: NextRequest) {
   if (!patient) {
     return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
   }
+  // Validate doctor if provided
+  if (d.doctorId) {
+    const doctor = await db.doctor.findUnique({ where: { id: d.doctorId } })
+    if (!doctor) {
+      return NextResponse.json({ error: 'Doctor not found' }, { status: 404 })
+    }
+  }
   const appointment = await db.appointment.create({
     data: {
       patientId: d.patientId,
+      doctorId: d.doctorId || null,
       scheduledAt,
       reason: d.reason?.trim() || null,
       status: d.status,
       fee: d.fee,
     },
-    include: { patient: true },
+    include: { patient: true, doctor: { include: { department: true } } },
   })
   return NextResponse.json({ appointment })
 }

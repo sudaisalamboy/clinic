@@ -44,6 +44,29 @@ export async function POST(req: NextRequest) {
   await createSession(owner.id, autoLockMinutes)
   await logActivity('setup', `Owner "${name}" created`, req.ip)
 
+  // Seed a handful of default departments so the doctor form has options immediately.
+  const defaultDepartments = [
+    'General Medicine',
+    'Cardiology',
+    'Pediatrics',
+    'Orthopedics',
+    'Dermatology',
+    'ENT',
+    'Gynecology',
+    'Neurology',
+  ]
+  try {
+    // Create departments one by one, skipping any that already exist.
+    for (const name of defaultDepartments) {
+      const exists = await db.department.findUnique({ where: { name } })
+      if (!exists) {
+        await db.department.create({ data: { name } })
+      }
+    }
+  } catch (e) {
+    console.error('Failed to seed default departments:', e)
+  }
+
   return NextResponse.json({
     ok: true,
     owner: { id: owner.id, name: owner.name, autoLockMinutes: owner.autoLockMinutes },

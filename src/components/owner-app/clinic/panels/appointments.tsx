@@ -11,6 +11,7 @@ import {
   XCircle,
   Clock,
   CalendarPlus,
+  Stethoscope,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -37,6 +38,12 @@ interface Appointment {
   fee: number
   createdAt: string
   patient: { id: string; name: string; phone: string | null }
+  doctor?: {
+    id: string
+    name: string
+    specialization: string | null
+    department?: { name: string } | null
+  } | null
 }
 
 const STATUS_META: Record<string, { label: string; icon: React.ReactNode; cls: string }> = {
@@ -179,6 +186,12 @@ export function AppointmentsPanel() {
                             {a.fee > 0 && (
                               <Badge variant="outline" className="text-xs font-normal">
                                 {formatCurrency(a.fee)}
+                              </Badge>
+                            )}
+                            {a.doctor && (
+                              <Badge variant="outline" className="text-xs font-normal gap-1">
+                                <Stethoscope className="h-3 w-3" />
+                                {a.doctor.name}
                               </Badge>
                             )}
                             {isPast && a.status === 'pending' && (

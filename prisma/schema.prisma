@@ -100,6 +100,9 @@ model Appointment {
   id          String   @id @default(cuid())
   patientId   String
   patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  /// Optional link to the doctor handling this appointment.
+  doctorId    String?
+  doctor      Doctor?  @relation(fields: [doctorId], references: [id], onDelete: SetNull)
   scheduledAt DateTime
   reason      String?
   status      String   @default("pending") // pending | completed | cancelled
@@ -110,6 +113,7 @@ model Appointment {
   bill Bill?
 
   @@index([patientId])
+  @@index([doctorId])
   @@index([scheduledAt])
 }
 
@@ -138,4 +142,59 @@ model Medicine {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
+
+// ---------- Doctor & Department ----------
+
+model Department {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  doctors     Doctor[]
+}
+
+model Doctor {
+  id              String   @id @default(cuid())
+  /// Auto-generated like DOC-2026-0001
+  doctorCode      String   @unique
+  name            String
+  /// specialty / qualification, e.g. "Cardiologist, MD"
+  specialization  String?
+  phone           String?
+  email           String?
+  /// consultation fee in USD
+  consultationFee Float    @default(0)
+  /// Active | Inactive
+  status          String   @default("Active")
+  departmentId    String?
+  department      Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  schedule     DoctorSchedule[]
+  appointments Appointment[]
+
+  @@index([status])
+  @@index([departmentId])
+}
+
+/// One row per working day for a doctor. Days: 0=Sun ... 6=Sat.
+model DoctorSchedule {
+  id        String   @id @default(cuid())
+  doctorId  String
+  doctor    Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  /// 0 (Sun) - 6 (Sat)
+  dayOfWeek Int
+  /// "09:00" — 24h local time
+  startTime String
+  /// "17:00"
+  endTime   String
+  /// if false, doctor is off that day (we still keep the row)
+  isWorking Boolean  @default(true)
+
+  @@unique([doctorId, dayOfWeek])
+  @@index([doctorId])
+}
+
 
