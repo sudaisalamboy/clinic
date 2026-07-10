@@ -1,0 +1,70 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// The single owner of this app. Only one row will ever exist.
+model Owner {
+  id              String    @id @default(cuid())
+  name            String
+  passwordHash    String
+  passwordSalt    String
+  /// Auto-lock timeout in minutes (used by the client & server cookie maxAge).
+  autoLockMinutes Int       @default(15)
+  /// Counter for consecutive failed login attempts.
+  failedAttempts  Int       @default(0)
+  /// If set, login is blocked until this time.
+  lockedUntil     DateTime?
+  /// Hint shown on the lock screen (optional).
+  passwordHint    String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  sessions        Session[]
+}
+
+/// Active sessions for the owner. Single user, but supports multiple devices.
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  ownerId   String
+  owner     Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([ownerId])
+}
+
+/// Owner's private notes.
+model Note {
+  id        String   @id @default(cuid())
+  title     String
+  content   String   @default("")
+  pinned    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Owner's private bookmarks/links.
+model Link {
+  id        String   @id @default(cuid())
+  title     String
+  url       String
+  category  String?
+  createdAt DateTime @default(now())
+}
+
+/// Audit log of important owner actions.
+model ActivityLog {
+  id        String   @id @default(cuid())
+  action    String
+  detail    String?
+  ip        String?
+  createdAt DateTime @default(now())
+}
