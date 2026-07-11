@@ -8,8 +8,6 @@ import {
   Shield,
   Clock,
   ArrowRight,
-  Loader2,
-  KeyRound,
   Smartphone,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -29,14 +27,12 @@ interface Props {
 
 export function OverviewPanel({ owner, onGoTo }: Props) {
   const [stats, setStats] = useState<Stats | null>(null)
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetch('/api/logs')
       .then((r) => (r.ok ? r.json() : Promise.reject(r)))
       .then((d) => setStats(d.stats))
       .catch(() => {})
-      .finally(() => setLoading(false))
   }, [])
 
   const created = owner.createdAt ? new Date(owner.createdAt) : null
@@ -62,29 +58,23 @@ export function OverviewPanel({ owner, onGoTo }: Props) {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <StatTile
                 icon={<StickyNote className="h-4 w-4" />}
                 label="Notes"
-                value={loading ? '—' : String(stats?.notes ?? 0)}
+                value={stats ? String(stats.notes) : '—'}
                 onClick={() => onGoTo('notes')}
               />
               <StatTile
                 icon={<Link2 className="h-4 w-4" />}
                 label="Links"
-                value={loading ? '—' : String(stats?.links ?? 0)}
+                value={stats ? String(stats.links) : '—'}
                 onClick={() => onGoTo('links')}
               />
               <StatTile
                 icon={<Smartphone className="h-4 w-4" />}
-                label="Active sessions"
-                value={loading ? '—' : String(stats?.activeSessions ?? 0)}
-                onClick={() => onGoTo('settings')}
-              />
-              <StatTile
-                icon={<Clock className="h-4 w-4" />}
-                label="Auto-lock"
-                value={`${owner.autoLockMinutes}m`}
+                label="Sessions"
+                value={stats ? String(stats.activeSessions) : '—'}
                 onClick={() => onGoTo('settings')}
               />
             </div>
@@ -107,20 +97,6 @@ export function OverviewPanel({ owner, onGoTo }: Props) {
           cta="Open links"
           onClick={() => onGoTo('links')}
         />
-        <QuickAction
-          icon={<KeyRound className="h-4 w-4" />}
-          title="Change password"
-          description="Rotate your vault password periodically."
-          cta="Open settings"
-          onClick={() => onGoTo('settings')}
-        />
-        <QuickAction
-          icon={<Activity className="h-4 w-4" />}
-          title="Review activity"
-          description="See sign-in attempts and recent actions."
-          cta="Open activity"
-          onClick={() => onGoTo('activity')}
-        />
       </div>
 
       <Card>
@@ -142,51 +118,21 @@ export function OverviewPanel({ owner, onGoTo }: Props) {
   )
 }
 
-function StatTile({
-  icon,
-  label,
-  value,
-  onClick,
-}: {
-  icon: React.ReactNode
-  label: string
-  value: string
-  onClick?: () => void
-}) {
+function StatTile({ icon, label, value, onClick }: { icon: React.ReactNode; label: string; value: string; onClick?: () => void }) {
   return (
-    <button
-      onClick={onClick}
-      className="text-left rounded-lg border bg-card p-3 hover:bg-accent/40 transition"
-    >
-      <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
-        {icon}
-        <span>{label}</span>
-      </div>
+    <button onClick={onClick} className="text-left rounded-lg border bg-card p-3 hover:bg-accent/40 transition">
+      <div className="flex items-center gap-1.5 text-muted-foreground text-xs">{icon}<span>{label}</span></div>
       <div className="text-2xl font-semibold mt-1 tabular-nums">{value}</div>
     </button>
   )
 }
 
-function QuickAction({
-  icon,
-  title,
-  description,
-  cta,
-  onClick,
-}: {
-  icon: React.ReactNode
-  title: string
-  description: string
-  cta: string
-  onClick: () => void
-}) {
+function QuickAction({ icon, title, description, cta, onClick }: { icon: React.ReactNode; title: string; description: string; cta: string; onClick: () => void }) {
   return (
     <Card className="hover:bg-accent/30 transition cursor-pointer" onClick={onClick}>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <div className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
-            {icon}
-          </div>
+          <div className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-muted">{icon}</div>
           <ArrowRight className="h-4 w-4 text-muted-foreground" />
         </div>
         <CardTitle className="text-base mt-3">{title}</CardTitle>
