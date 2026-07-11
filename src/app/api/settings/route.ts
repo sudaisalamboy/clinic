@@ -1,69 +1,44 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
+import { NextResponse } from 'next/server'
+import { requireUser, requireAdmin } from '@/lib/auth'
+import { getSettings } from '@/lib/settings'
 import { db } from '@/lib/db'
-import { getCurrentOwner, extendSession, logActivity } from '@/lib/auth'
-
-const SettingsSchema = z.object({
-  name: z.string().min(1).max(60).optional(),
-  autoLockMinutes: z.number().int().min(1).max(1440).optional(),
-  passwordHint: z.string().max(120).nullable().optional(),
-})
 
 export async function GET() {
-  const owner = await getCurrentOwner()
-  if (!owner) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
-  }
-  return NextResponse.json({
-    owner: {
-      id: owner.id,
-      name: owner.name,
-      autoLockMinutes: owner.autoLockMinutes,
-      passwordHint: owner.passwordHint,
-      createdAt: owner.createdAt,
-      updatedAt: owner.updatedAt,
-    },
-  })
-}
-
-export async function PUT(req: NextRequest) {
-  const owner = await getCurrentOwner()
-  if (!owner) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
-  }
-
-  const body = await req.json().catch(() => null)
-  const parsed = SettingsSchema.safeParse(body)
-  if (!parsed.success) {
+  try {
+    await requireUser()
+    const settings = await getSettings()
+    return NextResponse.json(settings)
+  } catch (e) {
     return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? 'Invalid input' },
-      { status: 400 },
+      { error: (e as Error).message },
+      { status: e instanceof Error && e.message === 'UNAUTHORIZED' ? 401 : 500 },
     )
   }
+}
 
-  const data: Record<string, unknown> = {}
-  if (parsed.data.name !== undefined) data.name = parsed.data.name
-  if (parsed.data.autoLockMinutes !== undefined)
-    data.autoLockMinutes = parsed.data.autoLockMinutes
-  if (parsed.data.passwordHint !== undefined)
-    data.passwordHint = parsed.data.passwordHint
-
-  const updated = await db.owner.update({
-    where: { id: owner.id },
-    data,
-  })
-
-  // Refresh the session cookie with the new autoLockMinutes
-  await extendSession(updated.autoLockMinutes)
-  await logActivity('settings_update', `Owner settings updated`, req.ip)
-
-  return NextResponse.json({
-    ok: true,
-    owner: {
-      id: updated.id,
-      name: updated.name,
-      autoLockMinutes: updated.autoLockMinutes,
-      passwordHint: updated.passwordHint,
-    },
-  })
+export async function PUT(req: Request) {
+  try {
+    await requireAdmin()
+    const body = await req.json()
+    const settings = await getSettings()
+    const updated = await db.settings.update({
+      where: { id: settings.id },
+      data: {
+        clinicName: body.clinicName ?? settings.clinicName,
+        logo: body.logo ?? settings.logo,
+        doctorName: body.doctorName ?? settings.doctorName,
+        mobile: body.mobile ?? settings.mobile,
+        email: body.email ?? settings.email,
+        address: body.address ?? settings.address,
+        gstNumber: body.gstNumber ?? settings.gstNumber,
+        currency: body.currency ?? settings.currency,
+        timezone: body.timezone ?? settings.timezone,
+      },
+    })
+    return NextResponse.json(updated)
+  } catch (e) {
+    const msg = (e as Error).message
+    const status = msg === 'UNAUTHORIZED' ? 401 : msg === 'FORBIDDEN' ? 403 : 500
+    return NextResponse.json({ error: msg }, { status })
+  }
 }

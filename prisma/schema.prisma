@@ -1,5 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Prisma schema for Clinic Management System
 
 generator client {
   provider = "prisma-client-js"
@@ -10,57 +9,200 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// The single owner of this app. Only one row will ever exist.
-model Owner {
-  id              String    @id @default(cuid())
-  name            String
-  passwordHash    String
-  passwordSalt    String
-  autoLockMinutes Int       @default(15)
-  failedAttempts  Int       @default(0)
-  lockedUntil     DateTime?
-  passwordHint    String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  sessions        Session[]
+// ---------- Auth ----------
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  passwordHash String
+  passwordSalt String
+  role      String   @default("Admin") // Admin | Receptionist
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sessions  Session[]
 }
 
-/// Active sessions for the owner.
 model Session {
   id        String   @id @default(cuid())
   token     String   @unique
-  ownerId   String
-  owner     Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   createdAt DateTime @default(now())
-
-  @@index([ownerId])
+  @@index([userId])
 }
 
-/// Owner's private notes.
-model Note {
-  id        String   @id @default(cuid())
-  title     String
-  content   String   @default("")
-  pinned    Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Settings {
+  id          String   @id @default(cuid())
+  clinicName  String   @default("My Clinic")
+  logo        String?
+  doctorName  String?
+  mobile      String?
+  email       String?
+  address     String?
+  gstNumber   String?
+  currency    String   @default("₹")
+  timezone    String   @default("Asia/Kolkata")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
-/// Owner's private bookmarks/links.
-model Link {
-  id        String   @id @default(cuid())
-  title     String
-  url       String
-  category  String?
-  createdAt DateTime @default(now())
+// ---------- Staff ----------
+
+model Staff {
+  id          String   @id @default(cuid())
+  name        String
+  gender      String?
+  mobile      String?
+  email       String?
+  address     String?
+  photo       String?
+  role        String   @default("Staff") // Doctor, Nurse, Receptionist, Staff
+  department  String?
+  salary      Float    @default(0)
+  joiningDate DateTime @default(now())
+  status      String   @default("Active") // Active | Inactive
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  appointments Appointment[]
+  @@index([role])
+  @@index([status])
 }
 
-/// Audit log of important owner actions.
-model ActivityLog {
+// ---------- Suppliers ----------
+
+model Supplier {
+  id          String   @id @default(cuid())
+  name        String
+  mobile      String?
+  email       String?
+  address     String?
+  photo       String?
+  supplies    String?  // what they supply
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  items       InventoryItem[]
+  @@index([name])
+}
+
+// ---------- Inventory ----------
+
+model InventoryCategory {
+  id    String @id @default(cuid())
+  name  String @unique
+  order Int    @default(0)
+  items InventoryItem[]
+}
+
+model InventoryItem {
+  id            String   @id @default(cuid())
+  name          String
+  categoryId    String
+  category      InventoryCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  supplierId    String?
+  supplier      Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  batchNumber   String?
+  expiryDate    DateTime?
+  unit          String?  // e.g. "box", "strip", "piece"
+  quantity      Int      @default(0)
+  minStock      Int      @default(10)
+  purchasePrice Float    @default(0)
+  sellingPrice  Float    @default(0)
+  mrp           Float    @default(0)
+  gst           Float    @default(0) // percent
+  status        String   @default("Active") // Active | Inactive
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  transactions  StockTransaction[]
+  billItems     BillItem[]
+  @@index([categoryId])
+  @@index([supplierId])
+  @@index([name])
+}
+
+model StockTransaction {
   id        String   @id @default(cuid())
-  action    String
-  detail    String?
-  ip        String?
+  itemId    String
+  item      InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  type      String   // "in" | "out"
+  quantity  Int
+  note      String?
   createdAt DateTime @default(now())
+  @@index([itemId])
+  @@index([createdAt])
+}
+
+// ---------- Consultation Fees ----------
+
+model ConsultationFee {
+  id          String  @id @default(cuid())
+  name        String  // General OPD, Follow Up, Emergency
+  fee         Float   @default(0)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  appointments Appointment[]
+}
+
+// ---------- Appointments ----------
+
+model Appointment {
+  id              String   @id @default(cuid())
+  patientName     String
+  mobile          String?
+  staffId         String?  // doctor
+  staff           Staff?   @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  consultationFeeId String?
+  consultationFee ConsultationFee? @relation(fields: [consultationFeeId], references: [id], onDelete: SetNull)
+  date            DateTime
+  type            String   @default("Walk-in") // Walk-in | Website | Phone
+  fee             Float    @default(0)
+  status          String   @default("Pending") // Pending | Completed | Cancelled | No Show
+  notes           String?
+  bill            Bill?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@index([date])
+  @@index([status])
+  @@index([staffId])
+}
+
+// ---------- Billing ----------
+
+model Bill {
+  id               String   @id @default(cuid())
+  billNumber       String   @unique
+  appointmentId    String?  @unique
+  appointment      Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  patientName      String
+  mobile           String?
+  consultationCharge Float  @default(0)
+  medicineCharge   Float    @default(0)
+  discount         Float    @default(0)
+  discountType     String   @default("fixed") // fixed | percent
+  gst              Float    @default(0) // percent
+  grandTotal       Float    @default(0)
+  paymentMethod    String   @default("Cash") // Cash | UPI | Card | Bank Transfer
+  paymentStatus    String   @default("Pending") // Pending | Paid
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  items            BillItem[]
+  @@index([createdAt])
+  @@index([paymentStatus])
+}
+
+model BillItem {
+  id        String @id @default(cuid())
+  billId    String
+  bill      Bill   @relation(fields: [billId], references: [id], onDelete: Cascade)
+  itemId    String?
+  item      InventoryItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  name      String
+  qty       Int    @default(1)
+  price     Float  @default(0)
+  @@index([billId])
 }

@@ -2,9 +2,8 @@ import { randomBytes, scryptSync, timingSafeEqual } from 'crypto'
 import { cookies } from 'next/headers'
 import { db } from './db'
 
-export const SESSION_COOKIE = 'owner_session'
-const MAX_FAILED_ATTEMPTS = 5
-const LOCKOUT_MINUTES = 15
+export const SESSION_COOKIE = 'clinic_session'
+const SESSION_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
 
 // ---------- Password hashing ----------
 
@@ -34,11 +33,11 @@ export function generateToken(): string {
   return randomBytes(32).toString('hex')
 }
 
-export async function createSession(ownerId: string, autoLockMinutes: number) {
+export async function createSession(userId: string, role: string) {
   const token = generateToken()
-  const expiresAt = new Date(Date.now() + autoLockMinutes * 60 * 1000)
+  const expiresAt = new Date(Date.now() + SESSION_TTL_MS)
   await db.session.create({
-    data: { token, ownerId, expiresAt },
+    data: { token, userId, expiresAt },
   })
   const store = await cookies()
   store.set(SESSION_COOKIE, token, {
@@ -60,110 +59,40 @@ export async function destroySession() {
   store.delete(SESSION_COOKIE)
 }
 
-export async function extendSession(autoLockMinutes: number) {
-  const owner = await getCurrentOwner()
-  if (!owner) return null
-  const store = await cookies()
-  const token = store.get(SESSION_COOKIE)?.value
-  if (!token) return null
-  const expiresAt = new Date(Date.now() + autoLockMinutes * 60 * 1000)
-  await db.session.updateMany({ where: { token }, data: { expiresAt } })
-  store.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    path: '/',
-    expires: expiresAt,
-  })
-  return expiresAt
-}
+// ---------- User access ----------
 
-// ---------- Owner access ----------
-
-export async function getCurrentOwner() {
+export async function getCurrentUser() {
   const store = await cookies()
   const token = store.get(SESSION_COOKIE)?.value
   if (!token) return null
   const session = await db.session.findUnique({
     where: { token },
-    include: { owner: true },
+    include: { user: true },
   })
   if (!session) return null
   if (session.expiresAt.getTime() < Date.now()) {
     await db.session.delete({ where: { id: session.id } }).catch(() => {})
     return null
   }
-  return session.owner
+  return session.user
 }
 
-export async function getOwnerCount(): Promise<number> {
-  return db.owner.count()
+export async function getUserCount(): Promise<number> {
+  return db.user.count()
 }
 
-export async function requireOwner() {
-  const owner = await getCurrentOwner()
-  if (!owner) {
+export async function requireUser() {
+  const user = await getCurrentUser()
+  if (!user) {
     throw new Error('UNAUTHORIZED')
   }
-  return owner
+  return user
 }
 
-// ---------- Failed attempt tracking ----------
-
-export const ATTEMPT_LIMIT = MAX_FAILED_ATTEMPTS
-export const LOCKOUT_MS = LOCKOUT_MINUTES * 60 * 1000
-
-export async function registerFailedAttempt(ownerId: string) {
-  const owner = await db.owner.findUnique({ where: { id: ownerId } })
-  if (!owner) return { locked: false, attempts: 0 }
-  const attempts = owner.failedAttempts + 1
-  const shouldLock = attempts >= MAX_FAILED_ATTEMPTS
-  await db.owner.update({
-    where: { id: ownerId },
-    data: {
-      failedAttempts: attempts,
-      lockedUntil: shouldLock
-        ? new Date(Date.now() + LOCKOUT_MS)
-        : owner.lockedUntil,
-    },
-  })
-  return { locked: shouldLock, attempts }
-}
-
-export async function resetFailedAttempts(ownerId: string) {
-  await db.owner.update({
-    where: { id: ownerId },
-    data: { failedAttempts: 0, lockedUntil: null },
-  })
-}
-
-export async function getLockStatus(ownerId: string) {
-  const owner = await db.owner.findUnique({ where: { id: ownerId } })
-  if (!owner) return { locked: false, remainingMs: 0 }
-  if (owner.lockedUntil && owner.lockedUntil.getTime() > Date.now()) {
-    return {
-      locked: true,
-      remainingMs: owner.lockedUntil.getTime() - Date.now(),
-    }
+export async function requireAdmin() {
+  const user = await requireUser()
+  if (user.role !== 'Admin') {
+    throw new Error('FORBIDDEN')
   }
-  // lockout expired — reset
-  if (owner.lockedUntil) {
-    await db.owner.update({
-      where: { id: ownerId },
-      data: { failedAttempts: 0, lockedUntil: null },
-    })
-  }
-  return { locked: false, remainingMs: 0 }
-}
-
-// ---------- Activity logging ----------
-
-export async function logActivity(
-  action: string,
-  detail?: string,
-  ip?: string,
-) {
-  await db.activityLog
-    .create({ data: { action, detail, ip } })
-    .catch(() => {})
+  return user
 }

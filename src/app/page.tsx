@@ -2,55 +2,38 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Loader2, ShieldCheck } from 'lucide-react'
-import { SetupScreen } from '@/components/owner-app/setup-screen'
-import { LockScreen } from '@/components/owner-app/lock-screen'
-import { Dashboard } from '@/components/owner-app/dashboard'
+import { Loader2, Stethoscope } from 'lucide-react'
+import { SetupScreen } from '@/components/clinic/setup-screen'
+import { LoginScreen } from '@/components/clinic/login-screen'
+import { AppShell } from '@/components/clinic/app-shell'
 
-type Phase = 'loading' | 'setup' | 'locked' | 'unlocked'
+type Phase = 'loading' | 'setup' | 'login' | 'app'
 
 interface Status {
-  ownerExists: boolean
+  usersExist: boolean
   authenticated: boolean
-  owner: { id?: string; name: string; autoLockMinutes?: number; passwordHint?: string | null; createdAt?: string | Date } | null
-  lock: { locked: boolean; remainingMs: number }
-}
-
-interface OwnerInfo {
-  id: string
-  name: string
-  autoLockMinutes: number
-  passwordHint?: string | null
-  createdAt?: string | Date
+  user: { id: string; name: string; role: string } | null
+  settings: { clinicName: string; currency: string } | null
 }
 
 export default function Home() {
   const [phase, setPhase] = useState<Phase>('loading')
   const [status, setStatus] = useState<Status | null>(null)
-  const [ownerInfo, setOwnerInfo] = useState<OwnerInfo | null>(null)
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch('/api/status', { cache: 'no-store' })
+      const res = await fetch('/api/auth/status', { cache: 'no-store' })
       if (!res.ok) throw new Error('status failed')
       const data: Status = await res.json()
       setStatus(data)
-      if (!data.ownerExists) {
+      if (!data.usersExist) {
         setPhase('setup')
-      } else if (data.authenticated && data.owner && data.owner.id) {
-        setOwnerInfo({
-          id: data.owner.id,
-          name: data.owner.name,
-          autoLockMinutes: data.owner.autoLockMinutes ?? 15,
-          passwordHint: data.owner.passwordHint,
-          createdAt: data.owner.createdAt,
-        })
-        setPhase('unlocked')
+      } else if (data.authenticated && data.user) {
+        setPhase('app')
       } else {
-        setPhase('locked')
+        setPhase('login')
       }
     } catch {
-      // Network failure — keep the user on the lock screen if we have an owner, otherwise setup
       setPhase((p) => (p === 'loading' ? 'setup' : p))
     }
   }, [])
@@ -58,23 +41,6 @@ export default function Home() {
   useEffect(() => {
     void refresh()
   }, [refresh])
-
-  // After unlocking or setup completes, fetch the full owner profile (incl. hint + createdAt)
-  useEffect(() => {
-    if (phase !== 'unlocked') return
-    fetch('/api/settings')
-      .then((r) => (r.ok ? r.json() : Promise.reject(r)))
-      .then((d) => {
-        setOwnerInfo({
-          id: d.owner.id,
-          name: d.owner.name,
-          autoLockMinutes: d.owner.autoLockMinutes,
-          passwordHint: d.owner.passwordHint,
-          createdAt: d.owner.createdAt,
-        })
-      })
-      .catch(() => {})
-  }, [phase])
 
   if (phase === 'loading') {
     return (
@@ -84,10 +50,10 @@ export default function Home() {
           animate={{ opacity: 1 }}
           className="flex flex-col items-center gap-3 text-muted-foreground"
         >
-          <ShieldCheck className="h-8 w-8 text-primary animate-pulse" />
+          <Stethoscope className="h-8 w-8 text-emerald-600 animate-pulse" />
           <div className="flex items-center gap-2 text-sm">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Securing the vault…
+            Loading clinic system…
           </div>
         </motion.div>
       </div>
@@ -98,26 +64,23 @@ export default function Home() {
     return <SetupScreen onDone={() => void refresh()} />
   }
 
-  if (phase === 'locked') {
+  if (phase === 'login') {
     return (
-      <LockScreen
-        ownerName={status?.owner?.name}
-        initialLockMs={status?.lock?.remainingMs ?? 0}
-        hint={status?.owner?.passwordHint ?? undefined}
-        onUnlocked={() => void refresh()}
+      <LoginScreen
+        clinicName={status?.settings?.clinicName}
+        onDone={() => void refresh()}
       />
     )
   }
 
-  if (phase === 'unlocked' && ownerInfo) {
-    return <Dashboard owner={ownerInfo} onLock={() => void refresh()} />
+  if (phase === 'app' && status?.user) {
+    return <AppShell user={status.user} onLogout={() => void refresh()} />
   }
 
-  // Fallback (should not happen)
   return (
     <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground">
       <button onClick={() => void refresh()} className="text-sm underline">
-        Reload vault
+        Reload
       </button>
     </div>
   )
