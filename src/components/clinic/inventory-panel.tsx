@@ -43,6 +43,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { fmtCurrency, fmtDate, toDateInput, isExpiringSoon, isExpired } from './utils'
+import { DatePicker } from './date-picker'
 
 interface Category { id: string; name: string }
 interface Supplier { id: string; name: string }
@@ -466,10 +467,11 @@ export function InventoryPanel({ currency = '₹' }: { currency?: string }) {
             </div>
             <div className="space-y-2">
               <Label>Expiry Date</Label>
-              <Input
-                type="date"
+              <DatePicker
                 value={form.expiryDate ? toDateInput(form.expiryDate) : ''}
-                onChange={(e) => setForm({ ...form, expiryDate: e.target.value ? new Date(e.target.value).toISOString() : '' })}
+                onChange={(v) => setForm({ ...form, expiryDate: v ? new Date(v).toISOString() : '' })}
+                withTime={false}
+                placeholder="Select expiry date"
               />
             </div>
             <div className="space-y-2">

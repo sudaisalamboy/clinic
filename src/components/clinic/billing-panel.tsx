@@ -43,6 +43,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { fmtCurrency, fmtDateTime } from './utils'
+import { DatePicker } from './date-picker'
 
 interface InventoryItem {
   id: string
@@ -314,8 +315,8 @@ export function BillingPanel({ currency = '₹' }: { currency?: string }) {
                 <SelectItem value="Paid">Paid</SelectItem>
               </SelectContent>
             </Select>
-            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-36" />
-            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-36" />
+            <DatePicker value={from} onChange={(v) => setFrom(v.slice(0, 10))} withTime={false} placeholder="From" className="w-36" />
+            <DatePicker value={to} onChange={(v) => setTo(v.slice(0, 10))} withTime={false} placeholder="To" className="w-36" />
             <Button onClick={openCreate} className="bg-emerald-600 hover:bg-emerald-700">
               <Plus className="h-4 w-4" /> Generate Bill
             </Button>

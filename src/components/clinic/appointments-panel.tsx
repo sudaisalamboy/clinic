@@ -43,6 +43,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { fmtCurrency, fmtDateTime, toDateTimeInput } from './utils'
+import { DatePicker } from './date-picker'
 
 interface Staff { id: string; name: string; role: string }
 interface Fee { id: string; name: string; fee: number }
@@ -214,10 +215,11 @@ export function AppointmentsPanel({ currency = '₹' }: { currency?: string }) {
                 className="pl-8 w-48"
               />
             </div>
-            <Input
-              type="date"
+            <DatePicker
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={(v) => setDate(v.slice(0, 10))}
+              withTime={false}
+              placeholder="Filter date"
               className="w-40"
             />
             <Select value={status} onValueChange={setStatus}>
@@ -379,10 +381,11 @@ export function AppointmentsPanel({ currency = '₹' }: { currency?: string }) {
             </div>
             <div className="space-y-2">
               <Label>Date & Time</Label>
-              <Input
-                type="datetime-local"
+              <DatePicker
                 value={toDateTimeInput(form.date)}
-                onChange={(e) => setForm({ ...form, date: new Date(e.target.value).toISOString() })}
+                onChange={(v) => setForm({ ...form, date: new Date(v).toISOString() })}
+                withTime={true}
+                placeholder="Select date & time"
               />
             </div>
             <div className="space-y-2">

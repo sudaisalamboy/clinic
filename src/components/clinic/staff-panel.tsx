@@ -43,6 +43,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { fmtCurrency, fmtDate, toDateInput } from './utils'
+import { DatePicker } from './date-picker'
 
 interface Staff {
   id: string
@@ -312,10 +313,11 @@ export function StaffPanel({ currency = '₹' }: { currency?: string }) {
             </div>
             <div className="space-y-2">
               <Label>Joining Date</Label>
-              <Input
-                type="date"
+              <DatePicker
                 value={toDateInput(form.joiningDate)}
-                onChange={(e) => setForm({ ...form, joiningDate: new Date(e.target.value).toISOString() })}
+                onChange={(v) => setForm({ ...form, joiningDate: new Date(v).toISOString() })}
+                withTime={false}
+                placeholder="Select date"
               />
             </div>
             <div className="space-y-2">

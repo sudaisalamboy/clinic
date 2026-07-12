@@ -22,6 +22,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { fmtCurrency, fmtDate, toDateInput } from './utils'
+import { DatePicker } from './date-picker'
 
 interface ReportData {
   dashboard: {
@@ -113,11 +114,11 @@ export function ReportsPanel({ currency = '₹' }: { currency?: string }) {
           <div className="flex items-end gap-2 flex-wrap">
             <div className="space-y-1">
               <Label className="text-xs">From</Label>
-              <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-40" />
+              <DatePicker value={from} onChange={(v) => setFrom(v.slice(0, 10))} withTime={false} placeholder="From" className="w-40" />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">To</Label>
-              <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-40" />
+              <DatePicker value={to} onChange={(v) => setTo(v.slice(0, 10))} withTime={false} placeholder="To" className="w-40" />
             </div>
             <Button variant="outline" onClick={print}>
               <Printer className="h-4 w-4" /> Print
