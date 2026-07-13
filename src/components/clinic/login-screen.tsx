@@ -16,7 +16,7 @@ export function LoginScreen({
   clinicName?: string
   onDone: () => void
 }) {
-  const [email, setEmail] = useState('admin@clinic.com')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
@@ -91,10 +91,6 @@ export function LoginScreen({
                 )}
                 Sign In
               </Button>
-
-              <div className="text-center text-xs text-muted-foreground bg-muted/50 rounded-md py-2 px-3">
-                <span className="font-medium">Default password:</span> admin123
-              </div>
             </form>
           </CardContent>
         </Card>
