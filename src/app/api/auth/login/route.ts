@@ -2,30 +2,34 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { verifyPassword, createSession } from '@/lib/auth'
 
-// In-memory rate limiter (per IP, resets every minute)
+// In-memory rate limiter — keyed on a single global key so ALL clients
+// share the same bucket. This prevents bypass via header rotation
+// (X-Forwarded-For, X-Real-IP, etc.). The tradeoff is that a shared
+// bucket means 5 attempts/min total across all clients, but for a
+// single-clinic app this is the safest approach.
 const RATE_LIMIT_WINDOW_MS = 60_000 // 1 minute
 const RATE_LIMIT_MAX = 5 // 5 attempts per minute
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+let rateLimitCount = 0
+let rateLimitResetAt = Date.now() + RATE_LIMIT_WINDOW_MS
 
-function checkRateLimit(ip: string): { allowed: boolean; remaining: number; resetMs: number } {
+function checkRateLimit(): { allowed: boolean; remaining: number; resetMs: number } {
   const now = Date.now()
-  const entry = rateLimitMap.get(ip)
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS })
+  if (now > rateLimitResetAt) {
+    rateLimitCount = 1
+    rateLimitResetAt = now + RATE_LIMIT_WINDOW_MS
     return { allowed: true, remaining: RATE_LIMIT_MAX - 1, resetMs: RATE_LIMIT_WINDOW_MS }
   }
-  entry.count++
-  if (entry.count > RATE_LIMIT_MAX) {
-    return { allowed: false, remaining: 0, resetMs: entry.resetAt - now }
+  rateLimitCount++
+  if (rateLimitCount > RATE_LIMIT_MAX) {
+    return { allowed: false, remaining: 0, resetMs: rateLimitResetAt - now }
   }
-  return { allowed: true, remaining: RATE_LIMIT_MAX - entry.count, resetMs: entry.resetAt - now }
+  return { allowed: true, remaining: RATE_LIMIT_MAX - rateLimitCount, resetMs: rateLimitResetAt - now }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    // Rate limit check
-    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
-    const rl = checkRateLimit(ip)
+    // Rate limit check — global bucket, not per-IP (prevents XFF bypass)
+    const rl = checkRateLimit()
     if (!rl.allowed) {
       return NextResponse.json(
         { error: 'Too many login attempts. Try again later.' },
