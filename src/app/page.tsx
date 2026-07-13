@@ -9,7 +9,6 @@ import { AppShell } from '@/components/clinic/app-shell'
 type Phase = 'loading' | 'login' | 'app'
 
 interface Status {
-  usersExist: boolean
   authenticated: boolean
   user: { id: string; name: string; role: string } | null
   settings: { clinicName: string; currency: string } | null
@@ -25,7 +24,6 @@ export default function Home() {
       if (!res.ok) throw new Error('status failed')
       const data: Status = await res.json()
       setStatus(data)
-      // Auto-setup creates the admin on first call, so we go straight to login or app
       if (data.authenticated && data.user) {
         setPhase('app')
       } else {

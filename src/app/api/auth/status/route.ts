@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getCurrentUser, hashPassword, createSession } from '@/lib/auth'
+import { getCurrentUser, hashPassword } from '@/lib/auth'
 import { getSettings } from '@/lib/settings'
 
-// Auto-creates default admin if no users exist, then returns auth status
+// Auto-creates default admin if no users exist, then returns minimal auth status.
+// Does NOT leak: usersExist, clinicName, currency, or any credentials.
 export async function GET() {
   try {
     const userCount = await db.user.count()
     if (userCount === 0) {
-      // Create default admin
-      const { hash, salt } = hashPassword('admin123')
+      // Create default admin with a strong password (not exposed anywhere)
+      const { hash, salt } = hashPassword('Cl!n1c@dm1n2026')
       await db.user.create({
         data: {
           name: 'Admin',
@@ -43,21 +44,22 @@ export async function GET() {
     }
 
     const user = await getCurrentUser()
-    const settings = await getSettings().catch(() => null)
+    const settings = user ? await getSettings().catch(() => null) : null
 
+    // Only return clinic info to authenticated users
     return NextResponse.json({
-      usersExist: true,
       authenticated: !!user,
       user: user
         ? { id: user.id, name: user.name, role: user.role }
         : null,
-      settings: settings
+      settings: (user && settings)
         ? { clinicName: settings.clinicName, currency: settings.currency }
         : null,
     })
-  } catch (e) {
+  } catch {
+    // Never leak internal errors
     return NextResponse.json(
-      { error: (e as Error).message },
+      { error: 'Service unavailable' },
       { status: 500 },
     )
   }
