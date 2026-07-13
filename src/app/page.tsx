@@ -3,11 +3,10 @@
 import { useEffect, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { Loader2, Stethoscope } from 'lucide-react'
-import { SetupScreen } from '@/components/clinic/setup-screen'
 import { LoginScreen } from '@/components/clinic/login-screen'
 import { AppShell } from '@/components/clinic/app-shell'
 
-type Phase = 'loading' | 'setup' | 'login' | 'app'
+type Phase = 'loading' | 'login' | 'app'
 
 interface Status {
   usersExist: boolean
@@ -26,15 +25,14 @@ export default function Home() {
       if (!res.ok) throw new Error('status failed')
       const data: Status = await res.json()
       setStatus(data)
-      if (!data.usersExist) {
-        setPhase('setup')
-      } else if (data.authenticated && data.user) {
+      // Auto-setup creates the admin on first call, so we go straight to login or app
+      if (data.authenticated && data.user) {
         setPhase('app')
       } else {
         setPhase('login')
       }
     } catch {
-      setPhase((p) => (p === 'loading' ? 'setup' : p))
+      setPhase('login')
     }
   }, [])
 
@@ -58,10 +56,6 @@ export default function Home() {
         </motion.div>
       </div>
     )
-  }
-
-  if (phase === 'setup') {
-    return <SetupScreen onDone={() => void refresh()} />
   }
 
   if (phase === 'login') {

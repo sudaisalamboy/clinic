@@ -1,15 +1,17 @@
-import { randomBytes, scryptSync, timingSafeEqual } from 'crypto'
+import { randomBytes, createHash, timingSafeEqual } from 'crypto'
 import { cookies } from 'next/headers'
 import { db } from './db'
 
 export const SESSION_COOKIE = 'clinic_session'
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
 
-// ---------- Password hashing ----------
+// ---------- Password hashing (SHA-256 + salt) ----------
 
 export function hashPassword(password: string): { hash: string; salt: string } {
-  const salt = randomBytes(16).toString('hex')
-  const hash = scryptSync(password, salt, 64).toString('hex')
+  const salt = randomBytes(32).toString('hex')
+  const hash = createHash('sha256')
+    .update(salt + password)
+    .digest('hex')
   return { hash, salt }
 }
 
@@ -19,7 +21,9 @@ export function verifyPassword(
   salt: string,
 ): boolean {
   const candidate = Buffer.from(
-    scryptSync(password, salt, 64).toString('hex'),
+    createHash('sha256')
+      .update(salt + password)
+      .digest('hex'),
     'hex',
   )
   const target = Buffer.from(hash, 'hex')
@@ -33,7 +37,7 @@ export function generateToken(): string {
   return randomBytes(32).toString('hex')
 }
 
-export async function createSession(userId: string, role: string) {
+export async function createSession(userId: string, _role?: string) {
   const token = generateToken()
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS)
   await db.session.create({
@@ -77,22 +81,14 @@ export async function getCurrentUser() {
   return session.user
 }
 
-export async function getUserCount(): Promise<number> {
-  return db.user.count()
-}
-
 export async function requireUser() {
   const user = await getCurrentUser()
-  if (!user) {
-    throw new Error('UNAUTHORIZED')
-  }
+  if (!user) throw new Error('UNAUTHORIZED')
   return user
 }
 
 export async function requireAdmin() {
   const user = await requireUser()
-  if (user.role !== 'Admin') {
-    throw new Error('FORBIDDEN')
-  }
+  if (user.role !== 'Admin') throw new Error('FORBIDDEN')
   return user
 }
