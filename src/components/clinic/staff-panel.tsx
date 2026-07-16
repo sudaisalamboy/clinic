@@ -2,45 +2,30 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Loader2, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import {
+  Loader2, Pencil, Plus, Search, Trash2, ArrowLeft, Phone, Mail, MapPin,
+  Calendar, DollarSign, User, Stethoscope,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useToast } from '@/hooks/use-toast'
 import { fmtCurrency, fmtDate, toDateInput } from './utils'
 import { DatePicker } from './date-picker'
@@ -60,18 +45,20 @@ interface Staff {
   status: string
 }
 
+interface Appointment {
+  id: string
+  patientName: string
+  mobile?: string | null
+  date: string
+  status: string
+  fee: number
+  type: string
+}
+
 const empty: Partial<Staff> = {
-  name: '',
-  gender: '',
-  mobile: '',
-  email: '',
-  address: '',
-  photo: '',
-  role: 'Doctor',
-  department: '',
-  salary: 0,
-  joiningDate: new Date().toISOString(),
-  status: 'Active',
+  name: '', gender: '', mobile: '', email: '', address: '', photo: '',
+  role: 'Doctor', department: '', salary: 0,
+  joiningDate: new Date().toISOString(), status: 'Active',
 }
 
 const roleColors: Record<string, string> = {
@@ -91,6 +78,9 @@ export function StaffPanel({ currency = '₹' }: { currency?: string }) {
   const [form, setForm] = useState<Partial<Staff>>(empty)
   const [saving, setSaving] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [profileStaff, setProfileStaff] = useState<Staff | null>(null)
+  const [profileAppointments, setProfileAppointments] = useState<Appointment[]>([])
+  const [profileLoading, setProfileLoading] = useState(false)
   const { toast } = useToast()
 
   const load = useCallback(async () => {
@@ -110,6 +100,20 @@ export function StaffPanel({ currency = '₹' }: { currency?: string }) {
     const t = setTimeout(load, 200)
     return () => clearTimeout(t)
   }, [load])
+
+  const openProfile = async (s: Staff) => {
+    setProfileStaff(s)
+    setProfileLoading(true)
+    try {
+      const res = await fetch(`/api/appointments?staffId=${s.id}&limit=20`)
+      const data = await res.json()
+      setProfileAppointments(data.appointments || data || [])
+    } catch {
+      setProfileAppointments([])
+    } finally {
+      setProfileLoading(false)
+    }
+  }
 
   const openCreate = () => {
     setEditing(null)
@@ -159,6 +163,122 @@ export function StaffPanel({ currency = '₹' }: { currency?: string }) {
     }
   }
 
+  // ---- Profile View ----
+  if (profileStaff) {
+    const s = profileStaff
+    const initials = s.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+    return (
+      <div className="space-y-4 max-w-4xl">
+        <Button variant="ghost" size="sm" onClick={() => setProfileStaff(null)} className="gap-1.5">
+          <ArrowLeft className="h-4 w-4" /> Back to Staff List
+        </Button>
+
+        {/* Profile header card */}
+        <Card className="overflow-hidden">
+          <div className="h-24" style={{ background: `linear-gradient(135deg, #10b981 0%, #0d9488 100%)` }} />
+          <CardContent className="p-6 -mt-12">
+            <div className="flex items-end gap-4">
+              <Avatar className="h-24 w-24 border-4 border-background rounded-full shrink-0">
+                {s.photo ? (
+                  <img src={s.photo} alt={s.name} className="h-full w-full rounded-full object-cover" />
+                ) : (
+                  <AvatarFallback className="h-full w-full rounded-full bg-emerald-100 text-emerald-700 text-2xl font-bold">
+                    {initials}
+                  </AvatarFallback>
+                )}
+              </Avatar>
+              <div className="flex-1 mb-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-xl font-bold">{s.name}</h2>
+                  <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${roleColors[s.role] || roleColors.Staff}`}>
+                    {s.role}
+                  </span>
+                  <Badge variant={s.status === 'Active' ? 'default' : 'secondary'}>{s.status}</Badge>
+                </div>
+                {s.department && (
+                  <p className="text-sm text-muted-foreground mt-0.5">{s.department}</p>
+                )}
+              </div>
+              <Button variant="outline" size="sm" onClick={() => { openEdit(s); setProfileStaff(null) }} className="gap-1.5 mb-2">
+                <Pencil className="h-3.5 w-3.5" /> Edit
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Details grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader><CardTitle className="text-sm">Contact Information</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <DetailRow icon={<Phone className="h-4 w-4 text-muted-foreground" />} label="Mobile" value={s.mobile || '—'} />
+              <DetailRow icon={<Mail className="h-4 w-4 text-muted-foreground" />} label="Email" value={s.email || '—'} />
+              <DetailRow icon={<MapPin className="h-4 w-4 text-muted-foreground" />} label="Address" value={s.address || '—'} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle className="text-sm">Employment Details</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <DetailRow icon={<User className="h-4 w-4 text-muted-foreground" />} label="Gender" value={s.gender || '—'} />
+              <DetailRow icon={<DollarSign className="h-4 w-4 text-muted-foreground" />} label="Salary" value={fmtCurrency(s.salary, currency)} />
+              <DetailRow icon={<Calendar className="h-4 w-4 text-muted-foreground" />} label="Joining Date" value={fmtDate(s.joiningDate)} />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Recent appointments */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Stethoscope className="h-4 w-4 text-emerald-600" />
+              Recent Appointments
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {profileLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : profileAppointments.length === 0 ? (
+              <div className="text-center py-6 text-sm text-muted-foreground">No appointments yet.</div>
+            ) : (
+              <div className="max-h-64 overflow-y-auto rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="p-2">Patient</TableHead>
+                      <TableHead className="p-2">Date</TableHead>
+                      <TableHead className="p-2">Type</TableHead>
+                      <TableHead className="p-2">Fee</TableHead>
+                      <TableHead className="p-2">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {profileAppointments.map((a) => (
+                      <TableRow key={a.id} className="hover:bg-muted/50">
+                        <TableCell className="p-2 font-medium">{a.patientName}</TableCell>
+                        <TableCell className="p-2 text-sm">{fmtDate(a.date)}</TableCell>
+                        <TableCell className="p-2 text-sm">{a.type}</TableCell>
+                        <TableCell className="p-2 text-sm">{fmtCurrency(a.fee, currency)}</TableCell>
+                        <TableCell className="p-2">
+                          <Badge variant={a.status === 'Completed' ? 'default' : a.status === 'Cancelled' ? 'destructive' : 'secondary'}>
+                            {a.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // ---- List View ----
   return (
     <div className="space-y-4">
       <Card>
@@ -220,9 +340,23 @@ export function StaffPanel({ currency = '₹' }: { currency?: string }) {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: i * 0.02 }}
-                      className="hover:bg-muted/50 border-b transition-colors"
+                      className="hover:bg-muted/50 border-b transition-colors cursor-pointer"
+                      onClick={() => openProfile(s)}
                     >
-                      <TableCell className="font-medium p-2">{s.name}</TableCell>
+                      <TableCell className="font-medium p-2">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-7 w-7">
+                            {s.photo ? (
+                              <img src={s.photo} alt="" className="h-7 w-7 rounded-full object-cover" />
+                            ) : (
+                              <AvatarFallback className="bg-muted text-[10px]">
+                                {s.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
+                              </AvatarFallback>
+                            )}
+                          </Avatar>
+                          <span className="text-emerald-600 hover:underline">{s.name}</span>
+                        </div>
+                      </TableCell>
                       <TableCell className="p-2">
                         <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${roleColors[s.role] || roleColors.Staff}`}>
                           {s.role}
@@ -237,7 +371,7 @@ export function StaffPanel({ currency = '₹' }: { currency?: string }) {
                           {s.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="p-2 text-right">
+                      <TableCell className="p-2 text-right" onClick={(e) => e.stopPropagation()}>
                         <Button variant="ghost" size="icon" onClick={() => openEdit(s)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -365,6 +499,18 @@ export function StaffPanel({ currency = '₹' }: { currency?: string }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  )
+}
+
+function DetailRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="mt-0.5">{icon}</div>
+      <div>
+        <div className="text-xs text-muted-foreground">{label}</div>
+        <div className="text-sm font-medium">{value}</div>
+      </div>
     </div>
   )
 }

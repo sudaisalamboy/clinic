@@ -9,9 +9,10 @@ export async function GET() {
     const settings = await getSettings()
     return NextResponse.json(settings)
   } catch (e) {
+    const msg = (e as Error).message
     return NextResponse.json(
-      { error: (e as Error).message },
-      { status: e instanceof Error && e.message === 'UNAUTHORIZED' ? 401 : 500 },
+      { error: msg === 'UNAUTHORIZED' ? 'Unauthorized' : 'Server error' },
+      { status: msg === 'UNAUTHORIZED' ? 401 : 500 },
     )
   }
 }
@@ -33,12 +34,14 @@ export async function PUT(req: Request) {
         gstNumber: body.gstNumber ?? settings.gstNumber,
         currency: body.currency ?? settings.currency,
         timezone: body.timezone ?? settings.timezone,
+        primaryColor: body.primaryColor ?? settings.primaryColor,
+        accentColor: body.accentColor ?? settings.accentColor,
       },
     })
     return NextResponse.json(updated)
   } catch (e) {
     const msg = (e as Error).message
     const status = msg === 'UNAUTHORIZED' ? 401 : msg === 'FORBIDDEN' ? 403 : 500
-    return NextResponse.json({ error: msg }, { status })
+    return NextResponse.json({ error: 'Save failed' }, { status })
   }
 }

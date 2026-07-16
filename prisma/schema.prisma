@@ -45,6 +45,8 @@ model Settings {
   gstNumber   String?
   currency    String   @default("₹")
   timezone    String   @default("Asia/Kolkata")
+  primaryColor String  @default("#10b981")
+  accentColor  String  @default("#0d9488")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
