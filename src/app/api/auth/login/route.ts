@@ -1,3 +1,10 @@
+/**
+ * Clinic Management System
+ * Created by: Sudais Alam
+ * GitHub: https://github.com/sudaisalamboy
+ * License: MIT
+ */
+
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { verifyPassword, createSession } from '@/lib/auth'

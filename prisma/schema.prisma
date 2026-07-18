@@ -1,3 +1,8 @@
+// Clinic Management System
+// Created by: Sudais Alam
+// GitHub: https://github.com/sudaisalamboy
+// License: MIT
+
 // Prisma schema for Clinic Management System
 
 generator client {

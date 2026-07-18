@@ -1,3 +1,10 @@
+/**
+ * Clinic Management System
+ * Created by: Sudais Alam
+ * GitHub: https://github.com/sudaisalamboy
+ * License: MIT
+ */
+
 import { randomBytes, createHash, timingSafeEqual } from 'crypto'
 import { cookies } from 'next/headers'
 import { db } from './db'

@@ -1,17 +1,49 @@
+# Dependencies
 node_modules/
+
+# Build
 .next/
 out/
 build/
 dist/
+
+# Database
 *.db
 *.db-journal
+db/
+
+# Environment
+.env
 .env.local
 .env.production
+.env.*.local
+
+# Logs
+*.log
 dev.log
 server.log
+
+# OS
 .DS_Store
 *.pem
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Uploads (temporary files)
 upload/
 public/datetime-picker.*
+
+# Scripts (test screenshots)
 scripts/*.png
+scripts/*.sh
+
+# Agent context
+agent-ctx/
+tool-results/
+
+# Skills
 skills/

@@ -1,3 +1,10 @@
+/**
+ * Clinic Management System
+ * Created by: Sudais Alam
+ * GitHub: https://github.com/sudaisalamboy
+ * License: MIT
+ */
+
 import { db } from './db'
 
 export async function getSettings() {

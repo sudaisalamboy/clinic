@@ -234,6 +234,22 @@ export function SettingsPanel({ onSettingsSaved }: { onSettingsSaved?: () => voi
           Save All Changes
         </Button>
       </div>
+
+      {/* Credit */}
+      <div className="text-center py-4 text-xs text-muted-foreground">
+        <p>
+          Clinic Management System · Made with ❤️ by{' '}
+          <a
+            href="https://github.com/sudaisalamboy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-foreground hover:text-emerald-600 transition-colors"
+          >
+            Sudais Alam
+          </a>
+        </p>
+        <p className="mt-1 text-[10px]">MIT License · © {new Date().getFullYear()}</p>
+      </div>
     </div>
   )
 }

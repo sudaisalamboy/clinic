@@ -419,6 +419,22 @@ export function AppShell({
             </motion.div>
           </AnimatePresence>
         </main>
+
+        {/* Footer credit */}
+        <footer className="h-8 border-t flex items-center justify-between px-4 shrink-0 text-[10px] text-muted-foreground">
+          <span>© {new Date().getFullYear()} {settings?.clinicName || 'Clinic'}</span>
+          <span>
+            Made with ❤️ by{' '}
+            <a
+              href="https://github.com/sudaisalamboy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-foreground hover:text-emerald-600 transition-colors"
+            >
+              Sudais Alam
+            </a>
+          </span>
+        </footer>
       </div>
     </div>
   )
