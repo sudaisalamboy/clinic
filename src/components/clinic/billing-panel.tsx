@@ -44,6 +44,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { fmtCurrency, fmtDateTime } from './utils'
 import { DatePicker } from './date-picker'
+import { EmptyState } from './empty-state'
+import { LoadingDots } from './skeletons'
 
 interface InventoryItem {
   id: string
@@ -292,7 +294,7 @@ export function BillingPanel({ currency = '₹' }: { currency?: string }) {
 
   return (
     <div className="space-y-4">
-      <Card>
+      <Card className="hover-lift">
         <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
           <CardTitle>Bills</CardTitle>
           <div className="flex items-center gap-2 flex-wrap">
@@ -324,11 +326,9 @@ export function BillingPanel({ currency = '₹' }: { currency?: string }) {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
+            <LoadingDots text="Loading bills" />
           ) : items.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">No bills found.</div>
+            <EmptyState variant="search" title="No bills found" description="Generate a bill to get started" />
           ) : (
             <div className="max-h-96 overflow-y-auto rounded-md border">
               <Table>
@@ -351,7 +351,7 @@ export function BillingPanel({ currency = '₹' }: { currency?: string }) {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: i * 0.02 }}
-                      className="hover:bg-muted/50 border-b transition-colors"
+                      className="hover:bg-muted/50 border-b transition-colors row-hover"
                     >
                       <TableCell className="font-mono text-xs p-2">{b.billNumber}</TableCell>
                       <TableCell className="font-medium p-2">{b.patientName}</TableCell>
@@ -464,7 +464,7 @@ export function BillingPanel({ currency = '₹' }: { currency?: string }) {
                   </TableHeader>
                   <TableBody>
                     {form.items.map((it: any, idx: number) => (
-                      <TableRow key={idx}>
+                      <TableRow key={idx} className="row-hover">
                         <TableCell className="p-2">{it.name}</TableCell>
                         <TableCell className="p-2">
                           <Input
@@ -614,7 +614,7 @@ export function BillingPanel({ currency = '₹' }: { currency?: string }) {
                     </TableHeader>
                     <TableBody>
                       {view.items.map((it) => (
-                        <TableRow key={it.id}>
+                        <TableRow key={it.id} className="row-hover">
                           <TableCell className="p-2">{it.name}</TableCell>
                           <TableCell className="p-2">{it.qty}</TableCell>
                           <TableCell className="p-2">{fmtCurrency(it.price, currency)}</TableCell>

@@ -34,6 +34,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { fmtCurrency, fmtDateTime } from './utils'
+import { EmptyState } from './empty-state'
+import { Skeleton, CardSkeleton, ChartSkeleton } from './skeletons'
 
 interface DashboardData {
   dashboard: {
@@ -79,8 +81,18 @@ export function DashboardPanel({ currency = '₹' }: { currency?: string }) {
 
   if (loading && !data) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="space-y-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+              <CardSkeleton />
+            </motion.div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <Card className="lg:col-span-2"><CardContent className="p-4"><ChartSkeleton /></CardContent></Card>
+          <Card><CardContent className="p-4"><Skeleton className="h-56 w-full" /></CardContent></Card>
+        </div>
       </div>
     )
   }
@@ -88,8 +100,13 @@ export function DashboardPanel({ currency = '₹' }: { currency?: string }) {
   if (!data) {
     return (
       <Card>
-        <CardContent className="py-8 text-center text-muted-foreground">
-          Failed to load dashboard data. <button className="underline" onClick={load}>Retry</button>
+        <CardContent className="py-8">
+          <EmptyState
+            variant="error"
+            title="Failed to load dashboard"
+            description="Something went wrong. Please try again."
+            action={<Button onClick={load} size="sm">Retry</Button>}
+          />
         </CardContent>
       </Card>
     )
@@ -310,7 +327,7 @@ export function DashboardPanel({ currency = '₹' }: { currency?: string }) {
           <CardContent>
             <div className="space-y-1">
               {data.recentAppointments.length === 0 ? (
-                <div className="text-center py-8 text-sm text-muted-foreground">No appointments yet</div>
+                <EmptyState title="No appointments yet" description="New appointments will show up here" variant="default" />
               ) : (
                 data.recentAppointments.slice(0, 6).map((a: any) => (
                   <div key={a.id} className="flex items-center justify-between rounded-lg px-2 py-2 hover:bg-muted/50 transition">
@@ -368,7 +385,14 @@ export function DashboardPanel({ currency = '₹' }: { currency?: string }) {
                 <div className="text-xs font-medium text-rose-600 mb-1.5">Low Stock ({data.lowStockItems.length})</div>
                 <div className="space-y-1 max-h-32 overflow-y-auto">
                   {data.lowStockItems.length === 0 ? (
-                    <div className="text-xs text-muted-foreground py-2 text-center bg-muted/30 rounded">All items well stocked ✓</div>
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="flex items-center justify-center gap-1.5 text-xs text-emerald-600 py-2 text-center bg-emerald-50 rounded font-medium"
+                    >
+                      <motion.span animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1, repeat: Infinity }}>✓</motion.span>
+                      All items well stocked
+                    </motion.div>
                   ) : (
                     data.lowStockItems.slice(0, 5).map((it: any) => (
                       <div key={it.id} className="flex items-center justify-between text-xs rounded-md border px-2 py-1.5">
@@ -387,7 +411,14 @@ export function DashboardPanel({ currency = '₹' }: { currency?: string }) {
                 <div className="text-xs font-medium text-amber-600 mb-1.5">Expiring Soon ({data.expiringItems.length})</div>
                 <div className="space-y-1 max-h-32 overflow-y-auto">
                   {data.expiringItems.length === 0 ? (
-                    <div className="text-xs text-muted-foreground py-2 text-center bg-muted/30 rounded">No items expiring soon ✓</div>
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="flex items-center justify-center gap-1.5 text-xs text-emerald-600 py-2 text-center bg-emerald-50 rounded font-medium"
+                    >
+                      <motion.span animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1, repeat: Infinity }}>✓</motion.span>
+                      No items expiring soon
+                    </motion.div>
                   ) : (
                     data.expiringItems.slice(0, 5).map((it: any) => (
                       <div key={it.id} className="flex items-center justify-between text-xs rounded-md border px-2 py-1.5">

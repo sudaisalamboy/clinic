@@ -23,6 +23,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast'
 import { fmtCurrency, fmtDate, toDateInput } from './utils'
 import { DatePicker } from './date-picker'
+import { EmptyState } from './empty-state'
 
 interface ReportData {
   dashboard: {
@@ -105,7 +106,7 @@ export function ReportsPanel({ currency = '₹' }: { currency?: string }) {
 
   return (
     <div className="space-y-4">
-      <Card>
+      <Card className="hover-lift">
         <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
           <div>
             <CardTitle>Reports</CardTitle>
@@ -132,14 +133,14 @@ export function ReportsPanel({ currency = '₹' }: { currency?: string }) {
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : !data ? (
-        <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">No data</CardContent>
+        <Card className="hover-lift">
+          <EmptyState variant="search" title="No data available" description="Try a different date range" />
         </Card>
       ) : (
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}>
-              <Card>
+              <Card className="hover-lift">
                 <CardContent className="p-4">
                   <div className="text-xs text-muted-foreground">Total Revenue (range)</div>
                   <div className="text-xl font-bold mt-1">
@@ -152,7 +153,7 @@ export function ReportsPanel({ currency = '₹' }: { currency?: string }) {
               </Card>
             </motion.div>
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-              <Card>
+              <Card className="hover-lift">
                 <CardContent className="p-4">
                   <div className="text-xs text-muted-foreground">Total Bills (range)</div>
                   <div className="text-xl font-bold mt-1">
@@ -162,7 +163,7 @@ export function ReportsPanel({ currency = '₹' }: { currency?: string }) {
               </Card>
             </motion.div>
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-              <Card>
+              <Card className="hover-lift">
                 <CardContent className="p-4">
                   <div className="text-xs text-muted-foreground">Appointments (range)</div>
                   <div className="text-xl font-bold mt-1">
@@ -172,7 +173,7 @@ export function ReportsPanel({ currency = '₹' }: { currency?: string }) {
               </Card>
             </motion.div>
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-              <Card>
+              <Card className="hover-lift">
                 <CardContent className="p-4">
                   <div className="text-xs text-muted-foreground">Inventory Alerts</div>
                   <div className="text-xl font-bold mt-1">
@@ -184,7 +185,7 @@ export function ReportsPanel({ currency = '₹' }: { currency?: string }) {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card>
+            <Card className="hover-lift">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Daily Revenue</CardTitle>
@@ -218,7 +219,7 @@ export function ReportsPanel({ currency = '₹' }: { currency?: string }) {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="hover-lift">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Appointment Status</CardTitle>
@@ -259,7 +260,7 @@ export function ReportsPanel({ currency = '₹' }: { currency?: string }) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
+            <Card className="hover-lift">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Low Stock Items</CardTitle>
                 <Button
@@ -299,7 +300,7 @@ export function ReportsPanel({ currency = '₹' }: { currency?: string }) {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="hover-lift">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Expiring Items</CardTitle>
                 <Button

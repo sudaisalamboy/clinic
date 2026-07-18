@@ -29,6 +29,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useToast } from '@/hooks/use-toast'
 import { fmtCurrency, fmtDate, toDateInput } from './utils'
 import { DatePicker } from './date-picker'
+import { EmptyState } from './empty-state'
+import { LoadingDots } from './skeletons'
 
 interface Staff {
   id: string
@@ -174,7 +176,7 @@ export function StaffPanel({ currency = '₹' }: { currency?: string }) {
         </Button>
 
         {/* Profile header card */}
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden hover-lift">
           <div className="h-24" style={{ background: `linear-gradient(135deg, #10b981 0%, #0d9488 100%)` }} />
           <CardContent className="p-6 -mt-12">
             <div className="flex items-end gap-4">
@@ -208,7 +210,7 @@ export function StaffPanel({ currency = '₹' }: { currency?: string }) {
 
         {/* Details grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card>
+          <Card className="hover-lift">
             <CardHeader><CardTitle className="text-sm">Contact Information</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <DetailRow icon={<Phone className="h-4 w-4 text-muted-foreground" />} label="Mobile" value={s.mobile || '—'} />
@@ -217,7 +219,7 @@ export function StaffPanel({ currency = '₹' }: { currency?: string }) {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="hover-lift">
             <CardHeader><CardTitle className="text-sm">Employment Details</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <DetailRow icon={<User className="h-4 w-4 text-muted-foreground" />} label="Gender" value={s.gender || '—'} />
@@ -228,7 +230,7 @@ export function StaffPanel({ currency = '₹' }: { currency?: string }) {
         </div>
 
         {/* Recent appointments */}
-        <Card>
+        <Card className="hover-lift">
           <CardHeader>
             <CardTitle className="text-sm flex items-center gap-2">
               <Stethoscope className="h-4 w-4 text-emerald-600" />
@@ -241,7 +243,7 @@ export function StaffPanel({ currency = '₹' }: { currency?: string }) {
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
               </div>
             ) : profileAppointments.length === 0 ? (
-              <div className="text-center py-6 text-sm text-muted-foreground">No appointments yet.</div>
+              <EmptyState title="No appointments yet" description="This staff member has no appointments" />
             ) : (
               <div className="max-h-64 overflow-y-auto rounded-md border">
                 <Table>
@@ -256,7 +258,7 @@ export function StaffPanel({ currency = '₹' }: { currency?: string }) {
                   </TableHeader>
                   <TableBody>
                     {profileAppointments.map((a) => (
-                      <TableRow key={a.id} className="hover:bg-muted/50">
+                      <TableRow key={a.id} className="hover:bg-muted/50 row-hover">
                         <TableCell className="p-2 font-medium">{a.patientName}</TableCell>
                         <TableCell className="p-2 text-sm">{fmtDate(a.date)}</TableCell>
                         <TableCell className="p-2 text-sm">{a.type}</TableCell>
@@ -281,7 +283,7 @@ export function StaffPanel({ currency = '₹' }: { currency?: string }) {
   // ---- List View ----
   return (
     <div className="space-y-4">
-      <Card>
+      <Card className="hover-lift">
         <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
           <CardTitle>Staff</CardTitle>
           <div className="flex items-center gap-2 flex-wrap">
@@ -313,11 +315,9 @@ export function StaffPanel({ currency = '₹' }: { currency?: string }) {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
+            <LoadingDots text="Loading staff" />
           ) : items.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">No staff yet.</div>
+            <EmptyState title="No staff yet" description="Add doctors, nurses, or staff" />
           ) : (
             <div className="max-h-96 overflow-y-auto rounded-md border">
               <Table>
@@ -340,7 +340,7 @@ export function StaffPanel({ currency = '₹' }: { currency?: string }) {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: i * 0.02 }}
-                      className="hover:bg-muted/50 border-b transition-colors cursor-pointer"
+                      className="hover:bg-muted/50 border-b transition-colors cursor-pointer row-hover"
                       onClick={() => openProfile(s)}
                     >
                       <TableCell className="font-medium p-2">

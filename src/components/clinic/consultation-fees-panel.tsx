@@ -34,6 +34,8 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
+import { EmptyState } from './empty-state'
+import { LoadingDots } from './skeletons'
 
 interface Fee {
   id: string
@@ -126,7 +128,7 @@ export function ConsultationFeesPanel({ currency = '₹' }: { currency?: string 
 
   return (
     <div className="space-y-4">
-      <Card>
+      <Card className="hover-lift">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Consultation Fees</CardTitle>
           <Button onClick={openCreate} className="bg-emerald-600 hover:bg-emerald-700">
@@ -135,11 +137,9 @@ export function ConsultationFeesPanel({ currency = '₹' }: { currency?: string 
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
+            <LoadingDots text="Loading fees" />
           ) : items.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">No consultation fees yet.</div>
+            <EmptyState title="No consultation fees" description="Add fee types like General OPD, Follow Up" />
           ) : (
             <div className="max-h-96 overflow-y-auto rounded-md border">
               <Table>
@@ -158,7 +158,7 @@ export function ConsultationFeesPanel({ currency = '₹' }: { currency?: string 
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: i * 0.03 }}
-                      className="hover:bg-muted/50 border-b transition-colors"
+                      className="hover:bg-muted/50 border-b transition-colors row-hover"
                     >
                       <TableCell className="font-medium p-2">{f.name}</TableCell>
                       <TableCell className="p-2">

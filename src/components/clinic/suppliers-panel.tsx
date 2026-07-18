@@ -34,6 +34,8 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
+import { EmptyState } from './empty-state'
+import { LoadingDots } from './skeletons'
 
 interface Supplier {
   id: string
@@ -135,7 +137,7 @@ export function SuppliersPanel() {
 
   return (
     <div className="space-y-4">
-      <Card>
+      <Card className="hover-lift">
         <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
           <CardTitle>Suppliers</CardTitle>
           <div className="flex items-center gap-2">
@@ -155,11 +157,9 @@ export function SuppliersPanel() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
+            <LoadingDots text="Loading suppliers" />
           ) : items.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">No suppliers yet.</div>
+            <EmptyState title="No suppliers yet" description="Add a supplier to get started" />
           ) : (
             <div className="max-h-96 overflow-y-auto rounded-md border">
               <Table>
@@ -179,7 +179,7 @@ export function SuppliersPanel() {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: i * 0.02 }}
-                      className="hover:bg-muted/50 border-b transition-colors"
+                      className="hover:bg-muted/50 border-b transition-colors row-hover"
                     >
                       <TableCell className="font-medium p-2">{s.name}</TableCell>
                       <TableCell className="p-2">{s.mobile || '—'}</TableCell>
