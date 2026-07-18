@@ -48,17 +48,29 @@ export function LoginScreen({
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-background to-teal-50 p-4">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         className="w-full max-w-md"
       >
         <Card className="shadow-xl border-emerald-200">
           <CardHeader className="text-center space-y-3">
-            <div className="mx-auto h-14 w-14 rounded-full bg-emerald-100 flex items-center justify-center">
+            <motion.div
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ delay: 0.2, type: 'spring', stiffness: 200, damping: 15 }}
+              className="mx-auto h-14 w-14 rounded-full bg-emerald-100 flex items-center justify-center"
+            >
               <Stethoscope className="h-7 w-7 text-emerald-600" />
-            </div>
-            <CardTitle className="text-2xl">{clinicName || 'Clinic Login'}</CardTitle>
-            <CardDescription>Sign in to manage your clinic</CardDescription>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+            >
+              <CardTitle className="text-2xl">{clinicName || 'Clinic Login'}</CardTitle>
+              <CardDescription>Sign in to manage your clinic</CardDescription>
+            </motion.div>
           </CardHeader>
           <CardContent>
             <form onSubmit={submit} className="space-y-4">

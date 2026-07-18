@@ -120,26 +120,44 @@ export function DashboardPanel({ currency = '₹' }: { currency?: string }) {
           return (
             <motion.div
               key={s.title}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.04 }}
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: i * 0.06, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              whileHover={{ y: -4, transition: { duration: 0.15 } }}
             >
-              <Card className="overflow-hidden hover:shadow-md transition-shadow">
+              <Card className="overflow-hidden hover:shadow-lg transition-shadow">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between mb-3">
-                    <div className={`h-9 w-9 rounded-lg ${s.bg} flex items-center justify-center`}>
+                    <motion.div
+                      className={`h-9 w-9 rounded-lg ${s.bg} flex items-center justify-center`}
+                      initial={{ scale: 0, rotate: -45 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ delay: i * 0.06 + 0.15, type: 'spring', stiffness: 200 }}
+                    >
                       <Icon className={`h-4.5 w-4.5 ${s.text}`} />
-                    </div>
+                    </motion.div>
                     {s.trend && (
-                      <span className={`text-[10px] font-medium flex items-center gap-0.5 ${
-                        s.trendUp ? 'text-emerald-600' : 'text-muted-foreground'
-                      }`}>
+                      <motion.span
+                        className={`text-[10px] font-medium flex items-center gap-0.5 ${
+                          s.trendUp ? 'text-emerald-600' : 'text-muted-foreground'
+                        }`}
+                        initial={{ opacity: 0, x: 10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.06 + 0.25 }}
+                      >
                         {s.trendUp && <ArrowUpRight className="h-3 w-3" />}
                         {s.trend}
-                      </span>
+                      </motion.span>
                     )}
                   </div>
-                  <div className="text-2xl font-bold tracking-tight">{s.value}</div>
+                  <motion.div
+                    className="text-2xl font-bold tracking-tight"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: i * 0.06 + 0.2 }}
+                  >
+                    {s.value}
+                  </motion.div>
                   <div className="text-xs text-muted-foreground mt-0.5">{s.title}</div>
                 </CardContent>
               </Card>
@@ -151,6 +169,12 @@ export function DashboardPanel({ currency = '₹' }: { currency?: string }) {
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Revenue chart */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="lg:col-span-2"
+        >
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
@@ -191,8 +215,14 @@ export function DashboardPanel({ currency = '₹' }: { currency?: string }) {
             </div>
           </CardContent>
         </Card>
+        </motion.div>
 
         {/* Appointment status pie */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        >
         {data.appointmentStatus && data.appointmentStatus.length > 0 ? (
           <Card>
             <CardHeader className="pb-2">
@@ -255,11 +285,17 @@ export function DashboardPanel({ currency = '₹' }: { currency?: string }) {
             </CardContent>
           </Card>
         )}
+        </motion.div>
       </div>
 
       {/* Recent appointments + alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Recent appointments */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.5, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        >
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
@@ -309,8 +345,14 @@ export function DashboardPanel({ currency = '₹' }: { currency?: string }) {
             </div>
           </CardContent>
         </Card>
+        </motion.div>
 
         {/* Alerts */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.6, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        >
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -361,6 +403,7 @@ export function DashboardPanel({ currency = '₹' }: { currency?: string }) {
             </div>
           </CardContent>
         </Card>
+        </motion.div>
       </div>
     </div>
   )

@@ -287,7 +287,7 @@ export function AppShell({
                   <Bell className="h-4 w-4" />
                   {stockAlerts.length > 0 && (
                     <span
-                      className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full text-[9px] font-bold text-white flex items-center justify-center"
+                      className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full text-[9px] font-bold text-white flex items-center justify-center animate-pulse-glow"
                       style={{ backgroundColor: '#ef4444' }}
                     >
                       {stockAlerts.length}
@@ -402,10 +402,10 @@ export function AppShell({
           <AnimatePresence mode="wait">
             <motion.div
               key={active}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.15 }}
+              initial={{ opacity: 0, y: 20, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.98 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
             >
               {active === 'dashboard' && <DashboardPanel currency={currency} />}
               {active === 'appointments' && <AppointmentsPanel currency={currency} />}

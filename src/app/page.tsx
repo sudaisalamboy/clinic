@@ -46,11 +46,21 @@ export default function Home() {
           animate={{ opacity: 1 }}
           className="flex flex-col items-center gap-3 text-muted-foreground"
         >
-          <Stethoscope className="h-8 w-8 text-emerald-600 animate-pulse" />
-          <div className="flex items-center gap-2 text-sm">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+          >
+            <Stethoscope className="h-10 w-10 text-emerald-600" />
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="flex items-center gap-2 text-sm"
+          >
             <Loader2 className="h-4 w-4 animate-spin" />
             Loading clinic system…
-          </div>
+          </motion.div>
         </motion.div>
       </div>
     )
