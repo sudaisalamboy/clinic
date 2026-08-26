@@ -1,0 +1,321 @@
+// Clinic Management System
+// Created by: Sudais Alam
+// GitHub: https://github.com/sudaisalamboy
+// License: MIT
+
+// Prisma schema for Clinic Management System
+
+// Note: status/role/payment fields are String (not Prisma enum) because
+// SQLite does not support native enums. Type safety is enforced at the
+// API layer via Zod — see src/lib/api-schemas.ts.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Auth ----------
+
+// Sessions are JWTs (signed with `jose`) carrying a unique `jti` claim.
+// Logout writes the jti into RevokedSession so a stolen token cannot
+// outlive the user's session (server-side revocation).
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String   // argon2id-encoded string (salt baked in)
+  // timestamp of last password set — enables rotation policies
+  passwordUpdatedAt DateTime @default(now())
+  role         String   @default("Admin") // Admin | Receptionist
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// Revoked JWTs (by `jti`). Checked on every authenticated request in
+// getCurrentUser(); expired rows are pruned opportunistically on logout.
+model RevokedSession {
+  id        String   @id // the JWT `jti` claim
+  userId    String?
+  createdAt DateTime @default(now())
+  expiresAt DateTime // JWT expiry — rows older than this are useless
+  @@index([expiresAt])
+}
+
+model Settings {
+  id          String   @id @default(cuid())
+  clinicName  String   @default("My Clinic")
+  logo        String?
+  doctorName  String?
+  mobile      String?
+  email       String?
+  address     String?
+  gstNumber   String?
+  currency    String   @default("₹")
+  timezone    String   @default("Asia/Kolkata")
+  primaryColor String  @default("#10b981")
+  accentColor  String  @default("#0d9488")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ---------- Staff ----------
+
+model Staff {
+  id          String   @id @default(cuid())
+  name        String
+  gender      String?
+  mobile      String?
+  email       String?
+  address     String?
+  photo       String?
+  role        String   @default("Staff") // Doctor, Nurse, Receptionist, Staff
+  department  String?
+  // salary is stored as INTEGER PAISE (₹1 = 100) — never Float.
+  // Float cannot represent most decimal currency values exactly and
+  // accumulates rounding drift across thousands of rows. All money in
+  // this schema follows the same convention (see src/lib/money.ts).
+  salary      Int      @default(0)
+  joiningDate DateTime @default(now())
+  status      String   @default("Active") // Active | Inactive
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  appointments Appointment[]
+  salaryPayments SalaryPayment[]
+  @@index([role])
+  @@index([status])
+}
+
+// ---------- Payroll ----------
+//
+// One salary payment per staff member per month. The @@unique constraint
+// is the DB-level double-pay guard: two concurrent "pay salary" requests
+// for the same staff+month can never both land — the loser gets P2002 →
+// 409. Amount is INTEGER PAISE like every other money field.
+model SalaryPayment {
+  id        String   @id @default(cuid())
+  staffId   String
+  staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  amount    Int      // paise
+  // Salary period, "YYYY-MM". Validated at the API layer.
+  month     String
+  method    String   @default("Cash") // Cash | UPI | Bank Transfer
+  note      String?
+  paidAt    DateTime @default(now())
+  createdAt DateTime @default(now())
+  @@unique([staffId, month])
+  @@index([staffId])
+  @@index([month])
+}
+
+// ---------- Suppliers ----------
+
+model Supplier {
+  id          String   @id @default(cuid())
+  name        String
+  mobile      String?
+  email       String?
+  address     String?
+  photo       String?
+  supplies    String?  // what they supply
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  items       InventoryItem[]
+  @@index([name])
+}
+
+// ---------- Inventory ----------
+
+model InventoryCategory {
+  id    String @id @default(cuid())
+  name  String @unique
+  order Int    @default(0)
+  items InventoryItem[]
+}
+
+model InventoryItem {
+  id            String   @id @default(cuid())
+  name          String
+  categoryId    String
+  category      InventoryCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  supplierId    String?
+  supplier      Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  batchNumber   String?
+  expiryDate    DateTime?
+  unit          String?  // e.g. "box", "strip", "piece"
+  quantity      Int      @default(0)
+  minStock      Int      @default(10)
+  // Money fields are INTEGER PAISE (₹1 = 100). gst is INTEGER BASIS
+  // POINTS (18% = 1800). Conversion happens only at the API boundary —
+  // see src/lib/money.ts.
+  purchasePrice Int      @default(0)
+  sellingPrice  Int      @default(0)
+  mrp           Int      @default(0)
+  gst           Int      @default(0) // basis points (percent × 100)
+  status        String   @default("Active") // Active | Inactive
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  transactions  StockTransaction[]
+  billItems     BillItem[]
+  @@index([categoryId])
+  @@index([supplierId])
+  @@index([name])
+}
+
+model StockTransaction {
+  id        String   @id @default(cuid())
+  itemId    String
+  item      InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  type      String   // "in" | "out" | "adjust" | "return"
+  // For in/out/return this is the DELTA applied to stock; for adjust it
+  // is the ABSOLUTE new quantity. Stock changes only ever flow through
+  // this table — direct quantity edits on items are forbidden.
+  quantity  Int
+  note      String?
+  createdAt DateTime @default(now())
+  @@index([itemId])
+  @@index([createdAt])
+}
+
+// ---------- Consultation Fees ----------
+
+model ConsultationFee {
+  id          String  @id @default(cuid())
+  name        String  // General OPD, Follow Up, Emergency
+  fee         Int     @default(0) // paise
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  appointments Appointment[]
+}
+
+// ---------- Patients ----------
+
+// Patient registry — gives a stable identity to repeat visitors so we
+// can query visit/bill history by patient (instead of string-matching
+// on patientName). patientName is kept on Appointment/Bill for backward
+// compatibility with walk-ins that have no registered patient.
+model Patient {
+  id        String   @id @default(cuid())
+  name      String
+  mobile    String?
+  email     String?
+  address   String?
+  gender    String?
+  age       Int?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  appointments Appointment[]
+  bills         Bill[]
+  @@index([mobile])
+  @@index([name])
+}
+
+// ---------- Appointments ----------
+
+model Appointment {
+  id              String   @id @default(cuid())
+  patientName     String
+  patientId       String?
+  patient         Patient? @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  mobile          String?
+  staffId         String?  // doctor
+  staff           Staff?   @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  consultationFeeId String?
+  consultationFee ConsultationFee? @relation(fields: [consultationFeeId], references: [id], onDelete: SetNull)
+  date            DateTime
+  type            String   @default("Walk-in") // Walk-in | Website | Phone
+  fee             Int      @default(0) // paise
+  status          String   @default("Pending") // Pending | Completed | Cancelled | No Show
+  cancelledAt     DateTime? // set when status flips to Cancelled (soft-cancel)
+  notes           String?
+  bill            Bill?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@index([date])
+  @@index([status])
+  @@index([staffId])
+  @@index([patientId])
+}
+
+// ---------- Billing ----------
+
+// Per-year bill number sequence. Atomic `upsert + increment` inside the
+// create transaction guarantees unique numbers without relying on string
+// ordering of billNumber (which breaks after 9999 bills/year).
+model BillSequence {
+  year       Int @id
+  lastNumber Int @default(0)
+}
+
+model Bill {
+  id               String   @id @default(cuid())
+  billNumber       String   @unique
+  appointmentId    String?  @unique
+  appointment      Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  patientName      String
+  patientId        String?
+  patient          Patient? @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  mobile           String?
+  // All money INTEGER PAISE. `discount` holds paise when discountType is
+  // 'fixed' and basis points (percent × 100) when 'percent'. gst is basis
+  // points. See src/lib/money.ts for boundary conversion.
+  consultationCharge Int   @default(0)
+  medicineCharge   Int      @default(0)
+  discount         Int      @default(0)
+  discountType     String   @default("fixed") // fixed | percent
+  gst              Int      @default(0) // basis points (percent × 100)
+  grandTotal       Int      @default(0)
+  // VOID state: bills are never hard-deleted. Voiding restores stock and
+  // keeps the financial record for audit; revenue queries exclude voided
+  // bills (voidedAt != null).
+  voidedAt         DateTime?
+  voidReason       String?
+  paymentMethod    String   @default("Cash") // Cash | UPI | Card | Bank Transfer
+  paymentStatus    String   @default("Pending") // Pending | Paid
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  items            BillItem[]
+  @@index([createdAt])
+  @@index([paymentStatus])
+  @@index([patientId])
+}
+
+model BillItem {
+  id        String @id @default(cuid())
+  billId    String
+  bill      Bill   @relation(fields: [billId], references: [id], onDelete: Cascade)
+  itemId    String?
+  item      InventoryItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  name      String
+  qty       Int    @default(1)
+  price     Int    @default(0) // paise — server-authoritative (from inventory sellingPrice when itemId is set)
+  @@index([billId])
+}
+
+// ---------- Audit log ----------
+
+// HIPAA-style audit trail. `before`/`after` are JSON-stringified
+// snapshots (SQLite has no native JSON column). Written via
+// src/lib/audit.ts — must NEVER throw into the request path.
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?  // who performed the action (nullable for system events)
+  action    String   // e.g. "auth.login", "settings.update", "staff.soft_delete", "bill.update", "user.role.change"
+  entity    String?  // affected model name
+  entityId  String?  // affected row id
+  before    String?  // JSON snapshot of prior state
+  after     String?  // JSON snapshot of new state
+  ip        String?
+  createdAt DateTime @default(now())
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}

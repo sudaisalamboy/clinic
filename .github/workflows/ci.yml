@@ -1,0 +1,201 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  # Allow manual runs from the Actions tab.
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint, Type-check & Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            node_modules
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: bun run db:generate
+
+      - name: Lint
+        run: bun run lint
+
+      # eslint does not run the TypeScript compiler — `next build` would
+      # fail on type errors that lint alone never catches, so type-check
+      # explicitly (cheap, and catches null-assignment class of bugs early).
+      - name: Type-check
+        run: bun run typecheck
+
+      # Unit tests for the pure money math (calcBillTotals, converters) —
+      # millisecond-fast, no DB/network. E2E browser tests run in the
+      # `e2e` job below.
+      - name: Unit tests
+        run: bun run test:unit
+
+  e2e:
+    name: Playwright E2E (incl. 300+ action full workflow)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    needs: lint
+    env:
+      CI: 'true'
+      DATABASE_URL: 'file:/home/runner/clinic-e2e.db'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            node_modules
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: bun run db:generate
+
+      - name: Push database schema
+        run: bun run db:push
+
+      - name: Generate per-run e2e admin credentials
+        # A fresh random password per CI run — nothing committed to the repo.
+        # Exported to GITHUB_ENV so both the Playwright process and the
+        # server (via playwright.config.ts webServer) see it.
+        run: |
+          echo "E2E_ADMIN_EMAIL=admin-e2e@clinic.test" >> "$GITHUB_ENV"
+          echo "E2E_ADMIN_PASSWORD=E2e-$(openssl rand -hex 16)-Aa9!" >> "$GITHUB_ENV"
+
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-pw-chromium-${{ hashFiles('bun.lock') }}
+
+      - name: Install Playwright browsers
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: bunx playwright install --with-deps chromium
+
+      - name: Install Playwright browser system deps (cached)
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: bunx playwright install-deps chromium
+
+      - name: Build (production)
+        run: bun run build
+
+      # playwright.config.ts starts the production standalone server itself
+      # (`bun run start`) with a generated AUTH_JWT_SECRET and the per-run
+      # e2e credentials, then runs the suite against it.
+      #
+      # The suite includes tests/e2e/full-workflow.spec.ts — a 300+ action
+      # end-to-end automation run that drives the real UI (login, settings,
+      # doctors/nurses add + ban, salary payroll, suppliers, inventory +
+      # stock movements, consultation fees, patients + appointments,
+      # billing with pay/void + stock restore) and verifies the
+      # backend↔frontend connection, asserting ≥ 300 actions executed.
+      - name: Run Playwright tests
+        run: bun run test:e2e
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 14
+
+      - name: Upload Playwright artifacts (traces/videos/screenshots)
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: tests/.results/artifacts
+          retention-days: 7
+
+  build:
+    name: Production Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: lint
+    env:
+      DATABASE_URL: 'file:/home/runner/clinic-build.db'
+      AUTH_JWT_SECRET: 'ci-build-only-secret-not-used-in-prod-0123456789ab'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            node_modules
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: bun run db:generate
+
+      - name: Push database schema
+        run: bun run db:push
+
+      - name: Build standalone
+        run: bun run build
+
+      - name: Smoke-test the production server
+        run: |
+          bun run start &
+          SERVER_PID=$!
+          # Wait for server to be ready.
+          for i in $(seq 1 30); do
+            if curl -sf -o /dev/null http://localhost:3000/; then
+              echo "Server is up"
+              break
+            fi
+            sleep 1
+          done
+          # Verify the page responds 200 and contains the app shell title.
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/)
+          if [ "$STATUS" != "200" ]; then
+            echo "Expected 200, got $STATUS"
+            kill $SERVER_PID
+            exit 1
+          fi
+          kill $SERVER_PID

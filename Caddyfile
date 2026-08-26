@@ -1,0 +1,37 @@
+# Gateway for the sandbox preview environment.
+#
+# SECURITY: XTransformPort lets a request be forwarded to an internal port
+# (used to reach sidecar mini-services). An unrestricted wildcard here would
+# allow ANY port — an open-SSRF vector into localhost-only services
+# (databases, caches, admin panels). The matcher below is an explicit
+# ALLOWLIST of the unprivileged 3000-3020 range only; anything else falls
+# through to the default handler (proxied to the Next.js app). Extend the
+# list if you run mini-services on other ports.
+#
+# NOTE: repeating the same key with different values inside one `query`
+# matcher is OR semantics (per Caddy docs) — i.e. XTransformPort must be
+# one of the listed values.
+
+:81 {
+	@transform_port_query {
+		query XTransformPort=3000 XTransformPort=3001 XTransformPort=3002 XTransformPort=3003 XTransformPort=3004 XTransformPort=3005 XTransformPort=3006 XTransformPort=3007 XTransformPort=3008 XTransformPort=3009 XTransformPort=3010 XTransformPort=3011 XTransformPort=3012 XTransformPort=3013 XTransformPort=3014 XTransformPort=3015 XTransformPort=3016 XTransformPort=3017 XTransformPort=3018 XTransformPort=3019 XTransformPort=3020
+	}
+
+	handle @transform_port_query {
+		reverse_proxy localhost:{query.XTransformPort} {
+			header_up Host {host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Real-IP {remote_host}
+		}
+	}
+
+	handle {
+		reverse_proxy localhost:3000 {
+			header_up Host {host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Real-IP {remote_host}
+		}
+	}
+}

@@ -1,0 +1,51 @@
+# Clinic Management System — .gitignore
+
+# Dependencies
+node_modules
+/.pnp
+.pnp.*
+
+# Next.js build output
+/.next/
+/out/
+/build
+
+# Testing
+/coverage
+/playwright-report
+/test-results
+/tests/.results
+tests/e2e/.auth/
+
+# Environment & secrets — NEVER commit
+.env
+.env.local
+.env.*.local
+
+# Local database (SQLite) — anywhere in the repo
+*.db
+*.db-journal
+prisma/db/
+
+# Logs
+*.log
+dev.log
+dev.out.log
+server.log
+
+# Misc
+.DS_Store
+*.pem
+*.pid
+*.tsbuildinfo
+next-env.d.ts
+worklog.md
+
+# Runtime / generated
+tool-results/
+upload/
+
+# Platform tooling (lives on disk but is not part of this project)
+/skills/
+/agent-ctx/
+tests/e2e/.run-id
