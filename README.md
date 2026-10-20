@@ -2,6 +2,25 @@
 
 A comprehensive clinic management system built with Next.js, TypeScript, and Prisma. Manage appointments, billing, inventory, staff, payroll, patients, and reports — all in one place.
 
+## 📸 Preview
+
+<p align="center">
+  <img src="preview/preview.png" alt="Clinic Management System Preview" width="100%" />
+</p>
+
+<table>
+  <tr>
+    <td align="center"><img src="preview/screenshot-1.png" alt="Dashboard" width="100%" /></td>
+    <td align="center"><img src="preview/screenshot-2.png" alt="Appointments" width="100%" /></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="preview/screenshot-3.png" alt="Billing" width="100%" /></td>
+    <td align="center"><img src="preview/screenshot-4.png" alt="Inventory" width="100%" /></td>
+  </tr>
+</table>
+
+> 📖 **Full setup instructions:** see [SETUP.md](SETUP.md) for detailed installation, configuration, and deployment guide.
+
 ## ✨ Features
 
 - **Dashboard** — KPI cards, revenue charts, appointment status, low-stock alerts (timezone-aware)
