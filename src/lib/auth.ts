@@ -62,7 +62,19 @@ function resolveAuthSecret(): Uint8Array {
   return new TextEncoder().encode(hex)
 }
 
-const AUTH_SECRET: Uint8Array = resolveAuthSecret()
+// Resolve the secret lazily (on first use) instead of at module-load time.
+// `next build`'s page-data collection imports this module (to collect metadata
+// for the /api/auth/* routes) under NODE_ENV=production WITHOUT a real
+// AUTH_JWT_SECRET — resolving eagerly would throw there and abort the build.
+// Deferring resolution to the first actual sign/verify call means builds never
+// require a live secret, while production requests still fail-fast (the first
+// auth call resolves + validates the secret, throwing if it is missing/short).
+let _authSecret: Uint8Array | null = null
+function getAuthSecret(): Uint8Array {
+  if (_authSecret) return _authSecret
+  _authSecret = resolveAuthSecret()
+  return _authSecret
+}
 
 const AUTH_ISSUER = process.env.AUTH_JWT_ISSUER ?? 'clinic'
 const AUTH_AUDIENCE = process.env.AUTH_JWT_AUDIENCE ?? 'clinic-web'
@@ -126,7 +138,7 @@ export async function createSession(user: SessionUser): Promise<void> {
     .setIssuer(AUTH_ISSUER)
     .setAudience(AUTH_AUDIENCE)
     .setExpirationTime(expiresAt)
-    .sign(AUTH_SECRET)
+    .sign(getAuthSecret())
 
   const store = await cookies()
   store.set(SESSION_COOKIE, token, {
@@ -151,7 +163,7 @@ export async function destroySession(): Promise<{ userId: string } | null> {
   let revokedUserId: string | null = null
   if (token) {
     try {
-      const { payload } = await jwtVerify(token, AUTH_SECRET, {
+      const { payload } = await jwtVerify(token, getAuthSecret(), {
         issuer: AUTH_ISSUER,
         audience: AUTH_AUDIENCE,
       })
@@ -195,7 +207,7 @@ export async function getCurrentUser() {
 
   let payload: { sub?: string; jti?: unknown }
   try {
-    const verified = await jwtVerify(token, AUTH_SECRET, {
+    const verified = await jwtVerify(token, getAuthSecret(), {
       issuer: AUTH_ISSUER,
       audience: AUTH_AUDIENCE,
     })
